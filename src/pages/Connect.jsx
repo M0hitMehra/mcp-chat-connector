@@ -1,45 +1,82 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  PlusIcon,
-  TrashIcon,
-  ServerStackIcon,
+  ArrowRightIcon,
+  BoltIcon,
   EyeIcon,
   EyeSlashIcon,
+  MoonIcon,
+  PlusIcon,
+  ServerStackIcon,
+  SparklesIcon,
+  SunIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 
-import api from "../api/chat";
+import { connectAgent } from "../api/chat";
+import useTheme from "../hooks/useTheme";
 
 const DEFAULT_MCP_URL =
   "https://mcp-server-company-details.onrender.com/mcp";
 
-export default function Connect() {
+const DEFAULT_SERVERS = [
+  {
+    name: "Company Details",
+    url: DEFAULT_MCP_URL,
+  },
+];
 
+const MODEL_OPTIONS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+  "gemini-3.1-flash-lite",
+];
+
+const loadSavedServers = () => {
+  const savedServers = localStorage.getItem("mcp_server_presets");
+
+  if (!savedServers) {
+    return DEFAULT_SERVERS;
+  }
+
+  try {
+    const parsedServers = JSON.parse(savedServers);
+
+    return Array.isArray(parsedServers) && parsedServers.length > 0
+      ? parsedServers
+      : DEFAULT_SERVERS;
+  } catch {
+    return DEFAULT_SERVERS;
+  }
+};
+
+export default function Connect() {
   const sessionId = localStorage.getItem("mcp_session_id");
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useTheme();
 
   const [apiKey, setApiKey] = useState("");
-
   const [model, setModel] = useState(
-    "gemini-2.5-flash"
+    localStorage.getItem("mcp_model") || MODEL_OPTIONS[0]
   );
-
-  const [mcpServers, setMcpServers] = useState([
-    {
-      name: "Company Details",
-      url: DEFAULT_MCP_URL,
-    },
-  ]);
-
+  const [mcpServers, setMcpServers] = useState(loadSavedServers);
   const [showApiKey, setShowApiKey] = useState(false);
-
   const [loading, setLoading] = useState(false);
-
   const [error, setError] = useState("");
 
-  // -----------------------------------------
-  // Add MCP Server
-  // -----------------------------------------
+  useEffect(() => {
+    if (sessionId) {
+      navigate("/chat");
+    }
+  }, [sessionId, navigate]);
+
+  useEffect(() => {
+    localStorage.setItem("mcp_model", model);
+  }, [model]);
+
+  useEffect(() => {
+    localStorage.setItem("mcp_server_presets", JSON.stringify(mcpServers));
+  }, [mcpServers]);
 
   const addMcpServer = () => {
     setMcpServers((current) => [
@@ -51,44 +88,24 @@ export default function Connect() {
     ]);
   };
 
-  // -----------------------------------------
-  // Remove MCP Server
-  // -----------------------------------------
-
   const removeMcpServer = (index) => {
     setMcpServers((current) =>
-      current.filter((_, currentIndex) => {
-        return currentIndex !== index;
-      })
+      current.filter((_, currentIndex) => currentIndex !== index)
     );
   };
 
-  // -----------------------------------------
-  // Update MCP Server
-  // -----------------------------------------
-
-  const updateMcpServer = (
-    index,
-    field,
-    value
-  ) => {
+  const updateMcpServer = (index, field, value) => {
     setMcpServers((current) =>
-      current.map((server, currentIndex) => {
-        if (currentIndex !== index) {
-          return server;
-        }
-
-        return {
-          ...server,
-          [field]: value,
-        };
-      })
+      current.map((server, currentIndex) =>
+        currentIndex === index
+          ? {
+              ...server,
+              [field]: value,
+            }
+          : server
+      )
     );
   };
-
-  // -----------------------------------------
-  // Validate
-  // -----------------------------------------
 
   const validate = () => {
     if (!apiKey.trim()) {
@@ -99,38 +116,37 @@ export default function Connect() {
       return "Gemini model is required.";
     }
 
-    if (mcpServers.length === 0) {
+    const activeServers = mcpServers.filter(
+      (server) => server.name.trim() || server.url.trim()
+    );
+
+    if (activeServers.length === 0) {
       return "Add at least one MCP server.";
     }
 
-    for (let i = 0; i < mcpServers.length; i++) {
-      const server = mcpServers[i];
+    for (let index = 0; index < activeServers.length; index += 1) {
+      const server = activeServers[index];
 
       if (!server.name.trim()) {
-        return `MCP server ${i + 1} needs a name.`;
+        return `MCP server ${index + 1} needs a name.`;
       }
 
       if (!server.url.trim()) {
-        return `MCP server ${i + 1} needs a URL.`;
+        return `MCP server ${index + 1} needs a URL.`;
       }
 
       try {
         new URL(server.url);
       } catch {
-        return `MCP server ${i + 1} has an invalid URL.`;
+        return `MCP server ${index + 1} has an invalid URL.`;
       }
     }
 
     return null;
   };
 
-  // -----------------------------------------
-  // Connect
-  // -----------------------------------------
-
   const handleConnect = async (event) => {
     event.preventDefault();
-
     setError("");
 
     const validationError = validate();
@@ -145,302 +161,237 @@ export default function Connect() {
 
       const payload = {
         api_key: apiKey.trim(),
-
         model,
-
         thread_id: crypto.randomUUID(),
-
-        mcp_servers: mcpServers.map(
-          (server) => ({
+        mcp_servers: mcpServers
+          .filter((server) => server.name.trim() || server.url.trim())
+          .map((server) => ({
             name: server.name.trim(),
             url: server.url.trim(),
-          })
-        ),
+          })),
       };
 
-      const response = await api.post(
-        "/connect",
-        payload
-      );
+      const response = await connectAgent(payload);
+      const nextSessionId = response.data.session_id;
 
-      const sessionId =
-        response.data.session_id;
-
-      if (!sessionId) {
-        throw new Error(
-          "Backend did not return a session ID."
-        );
+      if (!nextSessionId) {
+        throw new Error("Backend did not return a session ID.");
       }
 
-      localStorage.setItem(
-        "mcp_session_id",
-        sessionId
-      );
-
+      localStorage.setItem("mcp_session_id", nextSessionId);
       navigate("/chat");
-    } catch (err) {
-      console.error(err);
+    } catch (connectError) {
+      console.error(connectError);
 
-      const message =
-        err.response?.data?.detail ||
-        err.message ||
-        "Unable to connect.";
-
-      setError(message);
+      setError(
+        connectError.response?.data?.detail ||
+          connectError.message ||
+          "Unable to connect."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-
-  
-    useEffect(() => {
-      if (sessionId) {
-        navigate("/chat");
-        
-      }
-    }, [sessionId, navigate]);
-
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="mx-auto flex min-h-screen max-w-3xl items-center px-5 py-12">
-
-        <div className="w-full">
-
-          {/* Header */}
-
-          <div className="mb-8 text-center">
-
-            <div className="mb-4 flex justify-center">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-                <ServerStackIcon className="h-8 w-8" />
+    <main className="app-surface min-h-screen overflow-y-auto px-4 py-5 text-[var(--text)] sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-6xl flex-col justify-center gap-8 py-6 lg:grid lg:grid-cols-[0.86fr_1.14fr] lg:items-center">
+        <section className="animate-rise">
+          <div className="mb-8 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--accent)] text-[var(--app-bg)] shadow-lg shadow-emerald-900/10">
+                <ServerStackIcon className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--faint)]">
+                  MCP Client
+                </p>
+                <h1 className="text-2xl font-semibold tracking-normal text-[var(--text)] sm:text-3xl">
+                  Gemini agent console
+                </h1>
               </div>
             </div>
 
-            <h1 className="text-3xl font-semibold tracking-tight">
-              MCP Playground
-            </h1>
-
-            <p className="mt-2 text-sm text-zinc-400">
-              Connect Gemini to your MCP servers
-              and start chatting.
-            </p>
-
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title="Toggle theme"
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--panel)] text-[var(--text)] transition hover:-translate-y-0.5 hover:bg-[var(--panel-strong)]"
+            >
+              {isDark ? (
+                <SunIcon className="h-5 w-5" />
+              ) : (
+                <MoonIcon className="h-5 w-5" />
+              )}
+            </button>
           </div>
 
-          {/* Card */}
+          <div className="space-y-5">
+            <div className="soft-panel rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <SparklesIcon className="h-5 w-5 text-[var(--accent)]" />
+                <p className="text-sm text-[var(--muted)]">
+                  Connect once, then chat through your active backend session.
+                </p>
+              </div>
+            </div>
 
-          <form
-            onSubmit={handleConnect}
-            className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl"
-          >
+            <div className="grid grid-cols-2 gap-3">
+              <div className="soft-panel rounded-lg p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-[var(--faint)]">
+                  Model
+                </p>
+                <p className="mt-2 truncate text-sm font-semibold text-[var(--text)]">
+                  {model}
+                </p>
+              </div>
+              <div className="soft-panel rounded-lg p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-[var(--faint)]">
+                  MCP URLs
+                </p>
+                <p className="mt-2 text-sm font-semibold text-[var(--text)]">
+                  {mcpServers.length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-            {/* Gemini API Key */}
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">
+        <form
+          onSubmit={handleConnect}
+          className="glass-panel animate-rise rounded-lg p-4 sm:p-6"
+        >
+          <div className="grid gap-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[var(--text)]">
                 Gemini API Key
-              </label>
-
+              </span>
               <div className="relative">
-
                 <input
-                  type={
-                    showApiKey
-                      ? "text"
-                      : "password"
-                  }
+                  type={showApiKey ? "text" : "password"}
                   value={apiKey}
-                  onChange={(event) =>
-                    setApiKey(
-                      event.target.value
-                    )
-                  }
+                  onChange={(event) => setApiKey(event.target.value)}
                   placeholder="Enter Gemini API key"
                   autoComplete="off"
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 pr-12 outline-none transition focus:border-zinc-500"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 pr-12 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
                 />
-
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowApiKey(
-                      (current) => !current
-                    )
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-100"
+                  onClick={() => setShowApiKey((current) => !current)}
+                  title={showApiKey ? "Hide API key" : "Show API key"}
+                  className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--panel-muted)] hover:text-[var(--text)]"
                 >
-
                   {showApiKey ? (
                     <EyeSlashIcon className="h-5 w-5" />
                   ) : (
                     <EyeIcon className="h-5 w-5" />
                   )}
-
                 </button>
-
               </div>
+            </label>
 
-              <p className="mt-2 text-xs text-zinc-500">
-                The key is sent to your backend
-                to create the Gemini agent.
-              </p>
-            </div>
-
-            {/* Model */}
-
-            <div className="mt-6">
-
-              <label className="mb-2 block text-sm font-medium">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[var(--text)]">
                 Gemini Model
-              </label>
-
+              </span>
               <select
                 value={model}
-                onChange={(event) =>
-                  setModel(event.target.value)
-                }
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 outline-none focus:border-zinc-500"
+                onChange={(event) => setModel(event.target.value)}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
               >
-                <option value="gemini-2.5-flash">
-                  gemini-2.5-flash
-                </option>
-
-                <option value="gemini-2.5-pro">
-                  gemini-2.5-pro
-                </option>
-
-                <option value="gemini-3.1-flash-lite">
-                  gemini-3.1-flash-lite
-                </option>
+                {MODEL_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
               </select>
+            </label>
 
-            </div>
-
-            {/* MCP Servers */}
-
-            <div className="mt-8">
-
-              <div className="mb-4 flex items-center justify-between">
-
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="font-medium">
+                  <h2 className="text-sm font-semibold text-[var(--text)]">
                     MCP Servers
                   </h2>
-
-                  <p className="text-xs text-zinc-500">
-                    Add one or more Streamable
-                    HTTP MCP endpoints.
+                  <p className="text-xs text-[var(--muted)]">
+                    Streamable HTTP endpoints
                   </p>
                 </div>
-
                 <button
                   type="button"
                   onClick={addMcpServer}
-                  className="flex items-center gap-2 rounded-lg border border-zinc-700 px-3 py-2 text-sm transition hover:bg-zinc-800"
+                  title="Add MCP server"
+                  className="flex h-10 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 text-sm font-medium text-[var(--text)] transition hover:-translate-y-0.5 hover:border-[var(--accent)]"
                 >
                   <PlusIcon className="h-4 w-4" />
-
-                  Add MCP
+                  Add
                 </button>
-
               </div>
 
-              <div className="space-y-4">
+              <div className="grid max-h-[34vh] gap-3 overflow-y-auto pr-1 scroll-area sm:max-h-[42vh]">
+                {mcpServers.map((server, index) => (
+                  <div
+                    key={`${index}-${server.url}`}
+                    className="soft-panel animate-fade rounded-lg p-3"
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--faint)]">
+                        <BoltIcon className="h-4 w-4" />
+                        Server {index + 1}
+                      </span>
 
-                {mcpServers.map(
-                  (server, index) => (
+                      {mcpServers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeMcpServer(index)}
+                          title="Remove MCP server"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-red-500/10 hover:text-[var(--danger)]"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
 
-                    <div
-                      key={index}
-                      className="rounded-xl border border-zinc-800 bg-zinc-950 p-4"
-                    >
-
-                      <div className="mb-3 flex items-center justify-between">
-
-                        <span className="text-sm font-medium text-zinc-300">
-                          Server {index + 1}
-                        </span>
-
-                        {mcpServers.length >
-                          1 && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              removeMcpServer(
-                                index
-                              )
-                            }
-                            className="text-zinc-500 transition hover:text-red-400"
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
-                        )}
-
-                      </div>
-
+                    <div className="grid gap-3 sm:grid-cols-[0.42fr_0.58fr]">
                       <input
                         value={server.name}
                         onChange={(event) =>
-                          updateMcpServer(
-                            index,
-                            "name",
-                            event.target.value
-                          )
+                          updateMcpServer(index, "name", event.target.value)
                         }
                         placeholder="Server name"
-                        className="mb-3 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-zinc-600"
+                        className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
                       />
-
                       <input
                         value={server.url}
                         onChange={(event) =>
-                          updateMcpServer(
-                            index,
-                            "url",
-                            event.target.value
-                          )
+                          updateMcpServer(index, "url", event.target.value)
                         }
                         placeholder="https://your-server.com/mcp"
-                        className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm outline-none focus:border-zinc-600"
+                        className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
                       />
-
                     </div>
-
-                  )
-                )}
-
+                  </div>
+                ))}
               </div>
-
             </div>
 
-            {/* Error */}
-
             {error && (
-              <div className="mt-5 rounded-xl border border-red-900/50 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+              <div className="animate-fade rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-[var(--danger)]">
                 {error}
               </div>
             )}
 
-            {/* Connect */}
-
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 w-full rounded-xl bg-white px-4 py-3 font-medium text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--app-bg)] transition hover:-translate-y-0.5 hover:bg-[var(--accent-strong)] disabled:opacity-60"
             >
-
-              {loading
-                ? "Connecting to MCP..."
-                : "Connect"}
-
+              {loading ? "Connecting..." : "Connect"}
+              <ArrowRightIcon className="h-4 w-4" />
             </button>
-
-          </form>
-
-        </div>
-
+          </div>
+        </form>
       </div>
-    </div>
+    </main>
   );
 }

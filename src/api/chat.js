@@ -10,4 +10,11 @@ const api = axios.create({
   },
 });
 
+export const connectAgent = (payload) => api.post("/connect", payload);
+
+export const listSessions = () => api.get("/sessions");
+
+export const deleteSession = (sessionId) =>
+  api.delete(`/session/${sessionId}`);
+
 export default api;

@@ -1,5 +1,43 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: light;
+  --app-bg: #f6f7f3;
+  --panel: rgba(255, 255, 255, 0.78);
+  --panel-strong: #ffffff;
+  --panel-muted: rgba(241, 244, 239, 0.86);
+  --text: #141711;
+  --muted: #687066;
+  --faint: #8b9488;
+  --border: rgba(35, 43, 31, 0.12);
+  --accent: #17745b;
+  --accent-strong: #0f5d49;
+  --accent-soft: rgba(23, 116, 91, 0.12);
+  --danger: #bf3d3d;
+  --shadow: 0 22px 70px rgba(27, 39, 25, 0.12);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --app-bg: #10120f;
+  --panel: rgba(22, 25, 21, 0.78);
+  --panel-strong: #171a16;
+  --panel-muted: rgba(31, 35, 30, 0.86);
+  --text: #eef3e9;
+  --muted: #a5ad9f;
+  --faint: #778170;
+  --border: rgba(229, 238, 219, 0.12);
+  --accent: #7ce0ba;
+  --accent-strong: #a7f3d0;
+  --accent-soft: rgba(124, 224, 186, 0.13);
+  --danger: #fb8585;
+  --shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+}
+
+* {
+  box-sizing: border-box;
+}
+
 html,
 body,
 #root {
@@ -9,6 +47,10 @@ body,
 }
 
 body {
+  min-width: 320px;
+  overflow: hidden;
+  background: var(--app-bg);
+  color: var(--text);
   font-family:
     Inter,
     ui-sans-serif,
@@ -17,8 +59,122 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-
-     scrollbar-color: #4B5563 #1F2937;
+  letter-spacing: 0;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
 
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.app-surface {
+  background:
+    linear-gradient(135deg, rgba(23, 116, 91, 0.12), transparent 28%),
+    linear-gradient(315deg, rgba(80, 122, 255, 0.09), transparent 30%),
+    var(--app-bg);
+}
+
+.glass-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px);
+}
+
+.soft-panel {
+  background: var(--panel-muted);
+  border: 1px solid var(--border);
+}
+
+.animate-rise {
+  animation: rise 420ms ease both;
+}
+
+.animate-fade {
+  animation: fade 260ms ease both;
+}
+
+.streaming-dot {
+  animation: blink 900ms ease-in-out infinite;
+}
+
+.scroll-area {
+  scrollbar-width: thin;
+  scrollbar-color: var(--faint) transparent;
+}
+
+.scroll-area::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scroll-area::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.markdown-content {
+  overflow-wrap: anywhere;
+}
+
+.markdown-content p {
+  margin: 0.7rem 0;
+}
+
+.markdown-content p:first-child {
+  margin-top: 0;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 0.32;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
