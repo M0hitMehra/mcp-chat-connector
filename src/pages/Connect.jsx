@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  ArrowLeftIcon,
   ArrowRightIcon,
   BoltIcon,
   EyeIcon,
@@ -8,12 +9,16 @@ import {
   MoonIcon,
   PlusIcon,
   ServerStackIcon,
-  SparklesIcon,
   SunIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 
-import { connectAgent } from "../api/chat";
+import {
+  clearAuthSession,
+  connectAgent,
+  createThread,
+  getAuthToken,
+} from "../api/chat";
 import useTheme from "../hooks/useTheme";
 
 const DEFAULT_MCP_URL =
@@ -27,9 +32,9 @@ const DEFAULT_SERVERS = [
 ];
 
 const MODEL_OPTIONS = [
+  "gemini-3.1-flash-lite",
   "gemini-2.5-flash",
   "gemini-2.5-pro",
-  "gemini-3.1-flash-lite",
 ];
 
 const loadSavedServers = () => {
@@ -51,11 +56,10 @@ const loadSavedServers = () => {
 };
 
 export default function Connect() {
-  const sessionId = localStorage.getItem("mcp_session_id");
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
 
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKey] = useState(sessionStorage.getItem("mcp_api_key") || "");
   const [model, setModel] = useState(
     localStorage.getItem("mcp_model") || MODEL_OPTIONS[0]
   );
@@ -65,10 +69,10 @@ export default function Connect() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (sessionId) {
-      navigate("/chat");
+    if (!getAuthToken()) {
+      navigate("/");
     }
-  }, [sessionId, navigate]);
+  }, [navigate]);
 
   useEffect(() => {
     localStorage.setItem("mcp_model", model);
@@ -145,6 +149,11 @@ export default function Connect() {
     return null;
   };
 
+  const logout = () => {
+    clearAuthSession();
+    navigate("/");
+  };
+
   const handleConnect = async (event) => {
     event.preventDefault();
     setError("");
@@ -159,34 +168,57 @@ export default function Connect() {
     try {
       setLoading(true);
 
-      const payload = {
-        api_key: apiKey.trim(),
-        model,
-        thread_id: crypto.randomUUID(),
-        mcp_servers: mcpServers
-          .filter((server) => server.name.trim() || server.url.trim())
-          .map((server) => ({
-            name: server.name.trim(),
-            url: server.url.trim(),
-          })),
-      };
+      const activeServers = mcpServers
+        .filter((server) => server.name.trim() || server.url.trim())
+        .map((server) => ({
+          name: server.name.trim(),
+          url: server.url.trim(),
+        }));
 
-      const response = await connectAgent(payload);
-      const nextSessionId = response.data.session_id;
+      const sessionResponse = await connectAgent();
+      const sessionId = sessionResponse.data?.session_id;
 
-      if (!nextSessionId) {
+      if (!sessionId) {
         throw new Error("Backend did not return a session ID.");
       }
 
-      localStorage.setItem("mcp_session_id", nextSessionId);
+      const threadResponse = await createThread({
+        session_id: sessionId,
+        model_name: model,
+        apiKey: apiKey.trim(),
+        mcp_servers: activeServers,
+      });
+
+      const threadId = threadResponse.data?.thread_id;
+
+      if (!threadId) {
+        throw new Error("Backend did not return a thread ID.");
+      }
+
+      localStorage.setItem("mcp_session_id", sessionId);
+      localStorage.setItem("mcp_thread_id", threadId);
+      localStorage.setItem(
+        "mcp_thread_name",
+        threadResponse.data?.thread_name || "New Chat"
+      );
+      localStorage.setItem(
+        "mcp_thread_config",
+        JSON.stringify({
+          model_name: model,
+          mcp_servers: activeServers,
+        })
+      );
+      sessionStorage.setItem("mcp_api_key", apiKey.trim());
+
       navigate("/chat");
     } catch (connectError) {
       console.error(connectError);
 
       setError(
-        connectError.response?.data?.detail ||
+        connectError.response?.data?.message ||
+          connectError.response?.data?.detail ||
           connectError.message ||
-          "Unable to connect."
+          "Unable to create chat thread."
       );
     } finally {
       setLoading(false);
@@ -197,62 +229,63 @@ export default function Connect() {
     <main className="app-surface min-h-screen overflow-y-auto px-4 py-5 text-[var(--text)] sm:px-6 lg:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-6xl flex-col justify-center gap-8 py-6 lg:grid lg:grid-cols-[0.86fr_1.14fr] lg:items-center">
         <section className="animate-rise">
-          <div className="mb-8 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--accent)] text-[var(--app-bg)] shadow-lg shadow-emerald-900/10">
+          <div className="mb-8 flex items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] text-[var(--app-bg)]">
                 <ServerStackIcon className="h-6 w-6" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--faint)]">
-                  MCP Client
+                  Thread setup
                 </p>
                 <h1 className="text-2xl font-semibold tracking-normal text-[var(--text)] sm:text-3xl">
-                  Gemini agent console
+                  Configure Gemini and MCP
                 </h1>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={toggleTheme}
-              title="Toggle theme"
-              className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--panel)] text-[var(--text)] transition hover:-translate-y-0.5 hover:bg-[var(--panel-strong)]"
-            >
-              {isDark ? (
-                <SunIcon className="h-5 w-5" />
-              ) : (
-                <MoonIcon className="h-5 w-5" />
-              )}
-            </button>
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title="Toggle theme"
+                className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--panel)] transition hover:-translate-y-0.5"
+              >
+                {isDark ? (
+                  <SunIcon className="h-5 w-5" />
+                ) : (
+                  <MoonIcon className="h-5 w-5" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={logout}
+                title="Sign out"
+                className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--panel)] text-[var(--danger)] transition hover:-translate-y-0.5"
+              >
+                <ArrowLeftIcon className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-5">
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
             <div className="soft-panel rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <SparklesIcon className="h-5 w-5 text-[var(--accent)]" />
-                <p className="text-sm text-[var(--muted)]">
-                  Connect once, then chat through your active backend session.
-                </p>
-              </div>
+              <p className="text-xs uppercase tracking-[0.16em] text-[var(--faint)]">
+                Step 1
+              </p>
+              <p className="mt-2 text-sm font-semibold">Create secure session</p>
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="soft-panel rounded-lg p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-[var(--faint)]">
-                  Model
-                </p>
-                <p className="mt-2 truncate text-sm font-semibold text-[var(--text)]">
-                  {model}
-                </p>
-              </div>
-              <div className="soft-panel rounded-lg p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-[var(--faint)]">
-                  MCP URLs
-                </p>
-                <p className="mt-2 text-sm font-semibold text-[var(--text)]">
-                  {mcpServers.length}
-                </p>
-              </div>
+            <div className="soft-panel rounded-lg p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-[var(--faint)]">
+                Step 2
+              </p>
+              <p className="mt-2 text-sm font-semibold">Save thread config</p>
+            </div>
+            <div className="soft-panel rounded-lg p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-[var(--faint)]">
+                Step 3
+              </p>
+              <p className="mt-2 text-sm font-semibold">Stream responses</p>
             </div>
           </div>
         </section>
@@ -263,9 +296,7 @@ export default function Connect() {
         >
           <div className="grid gap-5">
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-[var(--text)]">
-                Gemini API Key
-              </span>
+              <span className="mb-2 block text-sm font-medium">Gemini API Key</span>
               <div className="relative">
                 <input
                   type={showApiKey ? "text" : "password"}
@@ -273,7 +304,7 @@ export default function Connect() {
                   onChange={(event) => setApiKey(event.target.value)}
                   placeholder="Enter Gemini API key"
                   autoComplete="off"
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 pr-12 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 pr-12 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
                 />
                 <button
                   type="button"
@@ -291,13 +322,11 @@ export default function Connect() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-[var(--text)]">
-                Gemini Model
-              </span>
+              <span className="mb-2 block text-sm font-medium">Gemini Model</span>
               <select
                 value={model}
                 onChange={(event) => setModel(event.target.value)}
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
               >
                 {MODEL_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -310,25 +339,23 @@ export default function Connect() {
             <div>
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-semibold text-[var(--text)]">
-                    MCP Servers
-                  </h2>
+                  <h2 className="text-sm font-semibold">MCP Servers</h2>
                   <p className="text-xs text-[var(--muted)]">
-                    Streamable HTTP endpoints
+                    Used when creating the backend thread
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={addMcpServer}
                   title="Add MCP server"
-                  className="flex h-10 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 text-sm font-medium text-[var(--text)] transition hover:-translate-y-0.5 hover:border-[var(--accent)]"
+                  className="flex h-10 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 text-sm font-medium transition hover:-translate-y-0.5 hover:border-[var(--accent)]"
                 >
                   <PlusIcon className="h-4 w-4" />
                   Add
                 </button>
               </div>
 
-              <div className="grid max-h-[34vh] gap-3 overflow-y-auto pr-1 scroll-area sm:max-h-[42vh]">
+              <div className="grid max-h-[36vh] gap-3 overflow-y-auto pr-1 scroll-area sm:max-h-[42vh]">
                 {mcpServers.map((server, index) => (
                   <div
                     key={`${index}-${server.url}`}
@@ -359,7 +386,7 @@ export default function Connect() {
                           updateMcpServer(index, "name", event.target.value)
                         }
                         placeholder="Server name"
-                        className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
+                        className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
                       />
                       <input
                         value={server.url}
@@ -367,7 +394,7 @@ export default function Connect() {
                           updateMcpServer(index, "url", event.target.value)
                         }
                         placeholder="https://your-server.com/mcp"
-                        className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
+                        className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
                       />
                     </div>
                   </div>
@@ -386,7 +413,7 @@ export default function Connect() {
               disabled={loading}
               className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--app-bg)] transition hover:-translate-y-0.5 hover:bg-[var(--accent-strong)] disabled:opacity-60"
             >
-              {loading ? "Connecting..." : "Connect"}
+              {loading ? "Creating thread..." : "Start chat"}
               <ArrowRightIcon className="h-4 w-4" />
             </button>
           </div>

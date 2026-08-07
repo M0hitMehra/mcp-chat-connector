@@ -1,16 +1,43 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { API_URL } from "../api/chat";
+import { useCallback, useMemo, useState } from "react";
+import { API_URL, getAuthHeaders } from "../api/chat";
 
 const createWelcomeMessage = () => ({
   id: crypto.randomUUID(),
   role: "assistant",
   content:
-    "Connected. Ask anything, or let the agent use your MCP servers when a tool can help.",
+    "Thread ready. Ask anything, or let the agent use your MCP servers when a tool can help.",
   createdAt: new Date().toISOString(),
 });
 
-const createStorageKey = (sessionId) =>
-  sessionId ? `mcp_chat_messages_${sessionId}` : "mcp_chat_messages_draft";
+const normalizeMessage = (message) => ({
+  id: message.id || crypto.randomUUID(),
+  role: message.role,
+  content: message.content || "",
+  createdAt: message.createdAt || message.created_at || new Date().toISOString(),
+});
+
+const createStorageKey = (sessionId, threadId) =>
+  sessionId && threadId
+    ? `mcp_chat_messages_${sessionId}_${threadId}`
+    : "mcp_chat_messages_draft";
+
+const loadStoredMessages = (storageKey) => {
+  const savedMessages = localStorage.getItem(storageKey);
+
+  if (!savedMessages) {
+    return [createWelcomeMessage()];
+  }
+
+  try {
+    const parsedMessages = JSON.parse(savedMessages);
+
+    return Array.isArray(parsedMessages) && parsedMessages.length > 0
+      ? parsedMessages.map(normalizeMessage)
+      : [createWelcomeMessage()];
+  } catch {
+    return [createWelcomeMessage()];
+  }
+};
 
 const createTranscript = (messages) =>
   messages
@@ -24,46 +51,55 @@ const createTranscript = (messages) =>
     })
     .join("\n\n---\n\n");
 
-export default function useChat(sessionId) {
-  const storageKey = useMemo(() => createStorageKey(sessionId), [sessionId]);
+export default function useChat({ sessionId, threadId, modelName }) {
+  const storageKey = useMemo(
+    () => createStorageKey(sessionId, threadId),
+    [sessionId, threadId]
+  );
 
-  const [messages, setMessages] = useState(() => {
-    const savedMessages = localStorage.getItem(storageKey);
-
-    if (!savedMessages) {
-      return [createWelcomeMessage()];
-    }
-
-    try {
-      const parsedMessages = JSON.parse(savedMessages);
-
-      return Array.isArray(parsedMessages) && parsedMessages.length > 0
-        ? parsedMessages
-        : [createWelcomeMessage()];
-    } catch {
-      return [createWelcomeMessage()];
-    }
-  });
-
+  const [messages, setMessages] = useState(() => loadStoredMessages(storageKey));
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(messages));
-  }, [messages, storageKey]);
+  const persistMessages = useCallback(
+    (nextMessages) => {
+      localStorage.setItem(storageKey, JSON.stringify(nextMessages));
+    },
+    [storageKey]
+  );
 
-  const appendToken = useCallback((assistantId, token) => {
-    setMessages((current) =>
-      current.map((message) =>
-        message.id === assistantId
-          ? {
-              ...message,
-              content: message.content + token,
-            }
-          : message
-      )
-    );
-  }, []);
+  const replaceMessages = useCallback(
+    (nextMessages) => {
+      const normalizedMessages =
+        nextMessages.length > 0
+          ? nextMessages.map(normalizeMessage)
+          : [createWelcomeMessage()];
+
+      setMessages(normalizedMessages);
+      persistMessages(normalizedMessages);
+      setError("");
+    },
+    [persistMessages]
+  );
+
+  const appendToken = useCallback(
+    (assistantId, token) => {
+      setMessages((current) => {
+        const nextMessages = current.map((message) =>
+          message.id === assistantId
+            ? {
+                ...message,
+                content: message.content + token,
+              }
+            : message
+        );
+
+        persistMessages(nextMessages);
+        return nextMessages;
+      });
+    },
+    [persistMessages]
+  );
 
   const readStream = useCallback(
     async (response, assistantId) => {
@@ -98,6 +134,12 @@ export default function useChat(sessionId) {
 
             try {
               const parsed = JSON.parse(data);
+
+              if (parsed.error) {
+                setError(parsed.error);
+                continue;
+              }
+
               const token =
                 parsed.token || parsed.content || parsed.delta || "";
 
@@ -122,8 +164,8 @@ export default function useChat(sessionId) {
         return;
       }
 
-      if (!sessionId) {
-        setError("Session not found. Please connect again.");
+      if (!sessionId || !threadId) {
+        setError("Session or thread not found. Please create a chat again.");
         return;
       }
 
@@ -144,7 +186,11 @@ export default function useChat(sessionId) {
         createdAt: new Date().toISOString(),
       };
 
-      setMessages((current) => [...current, userMessage, assistantMessage]);
+      setMessages((current) => {
+        const nextMessages = [...current, userMessage, assistantMessage];
+        persistMessages(nextMessages);
+        return nextMessages;
+      });
       setIsStreaming(true);
 
       try {
@@ -152,9 +198,12 @@ export default function useChat(sessionId) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...getAuthHeaders(),
           },
           body: JSON.stringify({
             session_id: sessionId,
+            thread_id: threadId,
+            model_name: modelName,
             message: text,
           }),
         });
@@ -164,7 +213,7 @@ export default function useChat(sessionId) {
 
           try {
             const data = await response.json();
-            errorMessage = data.detail || errorMessage;
+            errorMessage = data.detail || data.message || errorMessage;
           } catch {
             errorMessage = response.statusText || errorMessage;
           }
@@ -182,27 +231,29 @@ export default function useChat(sessionId) {
 
         setError(requestError.message || "Something went wrong.");
 
-        setMessages((current) =>
-          current.map((currentMessage) =>
+        setMessages((current) => {
+          const nextMessages = current.map((currentMessage) =>
             currentMessage.id === assistantId
               ? {
                   ...currentMessage,
                   content: "Unable to get a response from the agent.",
                 }
               : currentMessage
-          )
-        );
+          );
+
+          persistMessages(nextMessages);
+          return nextMessages;
+        });
       } finally {
         setIsStreaming(false);
       }
     },
-    [isStreaming, readStream, sessionId]
+    [isStreaming, modelName, persistMessages, readStream, sessionId, threadId]
   );
 
   const clearMessages = useCallback(() => {
-    setMessages([createWelcomeMessage()]);
-    setError("");
-  }, []);
+    replaceMessages([]);
+  }, [replaceMessages]);
 
   const copyTranscript = useCallback(async () => {
     await navigator.clipboard.writeText(createTranscript(messages));
@@ -231,5 +282,6 @@ export default function useChat(sessionId) {
     clearMessages,
     copyTranscript,
     downloadTranscript,
+    replaceMessages,
   };
 }
