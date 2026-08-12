@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRightIcon,
+  CheckCircleIcon,
+  CpuChipIcon,
   EyeIcon,
   EyeSlashIcon,
   LockClosedIcon,
   MoonIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
   SunIcon,
 } from "@heroicons/react/24/outline";
 
@@ -39,13 +43,26 @@ export default function Auth() {
     }));
   };
 
+  const getPasswordStrength = () => {
+    const pass = form.password;
+    if (!pass) return { score: 0, label: "", color: "" };
+    if (pass.length < 6) return { score: 1, label: "Weak", color: "bg-red-500" };
+    if (pass.length < 10 || !/\d/.test(pass))
+      return { score: 2, label: "Medium", color: "bg-amber-500" };
+    return { score: 3, label: "Strong", color: "bg-emerald-500" };
+  };
+
   const validate = () => {
     if (mode === "register" && !form.username.trim()) {
-      return "Username is required.";
+      return "Username is required to create an account.";
     }
 
     if (!form.email.trim()) {
-      return "Email is required.";
+      return "Email address is required.";
+    }
+
+    if (!/\S+@\S+\.\S+/.test(form.email.trim())) {
+      return "Please enter a valid email address.";
     }
 
     if (!form.password.trim()) {
@@ -53,7 +70,7 @@ export default function Auth() {
     }
 
     if (form.password.length < 6) {
-      return "Password must be at least 6 characters.";
+      return "Password must be at least 6 characters long.";
     }
 
     return null;
@@ -64,7 +81,6 @@ export default function Auth() {
     setError("");
 
     const validationError = validate();
-
     if (validationError) {
       setError(validationError);
       return;
@@ -90,13 +106,15 @@ export default function Auth() {
           ? await registerUser(payload)
           : await loginUser(payload);
 
-      if (!response.data?.token) {
-        throw new Error("Backend did not return an auth token.");
+      const token = response.data?.token;
+
+      if (!token) {
+        throw new Error("Backend did not return an authentication token.");
       }
 
       setAuthSession({
-        token: response.data.token,
-        user: response.data.data,
+        token,
+        user: response.data?.data || { email: form.email.trim() },
       });
 
       navigate("/connect");
@@ -107,130 +125,202 @@ export default function Auth() {
         authError.response?.data?.message ||
           authError.response?.data?.detail ||
           authError.message ||
-          "Authentication failed."
+          "Authentication failed. Please check your credentials."
       );
     } finally {
       setLoading(false);
     }
   };
 
+  const strength = getPasswordStrength();
+
   return (
-    <main className="app-surface min-h-screen overflow-y-auto px-4 py-5 text-[var(--text)] sm:px-6">
-      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-5xl flex-col justify-center gap-8 py-6 lg:grid lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
-        <section className="animate-rise">
-          <div className="mb-8 flex items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] text-[var(--app-bg)]">
-                <LockClosedIcon className="h-6 w-6" />
+    <main className="app-surface flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-8 lg:grid lg:grid-cols-[1fr_1.1fr] lg:items-center lg:gap-12">
+        {/* Left Hero Column */}
+        <section className="animate-rise flex flex-col justify-between">
+          <div>
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--app-bg)] shadow-lg shadow-[var(--accent-soft)]">
+                  <CpuChipIcon className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">
+                    MCP Client Studio
+                  </span>
+                  <h1 className="text-2xl font-extrabold tracking-tight text-[var(--text)] sm:text-3xl">
+                    Intelligent Agent Studio
+                  </h1>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--faint)]">
-                  Secure MCP
-                </p>
-                <h1 className="text-2xl font-semibold tracking-normal text-[var(--text)] sm:text-3xl">
-                  Sign in to your agent workspace
-                </h1>
-              </div>
+
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title="Toggle Theme"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--text)]"
+              >
+                {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={toggleTheme}
-              title="Toggle theme"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--panel)] transition hover:-translate-y-0.5"
-            >
-              {isDark ? (
-                <SunIcon className="h-5 w-5" />
-              ) : (
-                <MoonIcon className="h-5 w-5" />
-              )}
-            </button>
-          </div>
+            <p className="mb-8 text-sm leading-relaxed text-[var(--muted)] sm:text-base">
+              Connect model context protocol (MCP) servers directly to Gemini models. Stream real-time agent reasoning, manage sessions, and run custom tool pipelines seamlessly.
+            </p>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            {["Bearer auth", "Thread history", "MCP config"].map((label) => (
-              <div key={label} className="soft-panel rounded-lg p-4">
-                <p className="text-sm font-semibold">{label}</p>
+            {/* Feature Highlights Grid */}
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <div className="glass-panel flex items-start gap-3 rounded-xl p-3.5 transition hover:-translate-y-0.5">
+                <ShieldCheckIcon className="h-5 w-5 shrink-0 text-[var(--accent)]" />
+                <div>
+                  <div className="text-xs font-semibold text-[var(--text)]">JWT Bearer Security</div>
+                  <div className="text-[11px] text-[var(--muted)]">Encrypted MongoDB session auth</div>
+                </div>
               </div>
-            ))}
+
+              <div className="glass-panel flex items-start gap-3 rounded-xl p-3.5 transition hover:-translate-y-0.5">
+                <SparklesIcon className="h-5 w-5 shrink-0 text-[var(--emerald)]" />
+                <div>
+                  <div className="text-xs font-semibold text-[var(--text)]">MCP Tool Servers</div>
+                  <div className="text-[11px] text-[var(--muted)]">Dynamically expand agent capabilities</div>
+                </div>
+              </div>
+
+              <div className="glass-panel flex items-start gap-3 rounded-xl p-3.5 transition hover:-translate-y-0.5">
+                <CheckCircleIcon className="h-5 w-5 shrink-0 text-[var(--accent)]" />
+                <div>
+                  <div className="text-xs font-semibold text-[var(--text)]">Persistent Threads</div>
+                  <div className="text-[11px] text-[var(--muted)]">Full chat history & memory summaries</div>
+                </div>
+              </div>
+
+              <div className="glass-panel flex items-start gap-3 rounded-xl p-3.5 transition hover:-translate-y-0.5">
+                <LockClosedIcon className="h-5 w-5 shrink-0 text-[var(--emerald)]" />
+                <div>
+                  <div className="text-xs font-semibold text-[var(--text)]">Streaming SSE</div>
+                  <div className="text-[11px] text-[var(--muted)]">Low-latency token-by-token response</div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
+        {/* Right Form Card */}
         <form
           onSubmit={submit}
-          className="glass-panel animate-rise rounded-lg p-4 sm:p-6"
+          className="glass-panel-strong animate-scale rounded-2xl p-6 sm:p-8"
         >
-          <div className="mb-5 grid grid-cols-2 rounded-lg border border-[var(--border)] bg-[var(--panel-muted)] p-1">
-            {["login", "register"].map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => {
-                  setMode(option);
-                  setError("");
-                }}
-                className={`h-10 rounded-md text-sm font-semibold capitalize transition ${
-                  mode === option
-                    ? "bg-[var(--panel-strong)] text-[var(--text)] shadow-sm"
-                    : "text-[var(--muted)] hover:text-[var(--text)]"
-                }`}
-              >
-                {option}
-              </button>
-            ))}
+          {/* Mode Switcher Header */}
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-[var(--text)]">
+                {mode === "login" ? "Welcome back" : "Create your account"}
+              </h2>
+              <p className="text-xs text-[var(--muted)]">
+                {mode === "login" ? "Sign in to access your agent workspace" : "Register to start configuring MCP servers"}
+              </p>
+            </div>
           </div>
 
-          <div className="grid gap-4">
+          <div className="mb-6 grid grid-cols-2 rounded-xl bg-[var(--panel-muted)] p-1 border border-[var(--border)]">
+            <button
+              type="button"
+              onClick={() => {
+                setMode("login");
+                setError("");
+              }}
+              className={`rounded-lg py-2 text-xs font-semibold transition ${
+                mode === "login"
+                  ? "bg-[var(--panel-strong)] text-[var(--accent)] shadow-sm"
+                  : "text-[var(--muted)] hover:text-[var(--text)]"
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode("register");
+                setError("");
+              }}
+              className={`rounded-lg py-2 text-xs font-semibold transition ${
+                mode === "register"
+                  ? "bg-[var(--panel-strong)] text-[var(--accent)] shadow-sm"
+                  : "text-[var(--muted)] hover:text-[var(--text)]"
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
+
+          <div className="space-y-4">
             {mode === "register" && (
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium">Username</span>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  Username
+                </label>
                 <input
+                  type="text"
                   value={form.username}
-                  onChange={(event) => updateField("username", event.target.value)}
-                  placeholder="Mohit"
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
+                  onChange={(e) => updateField("username", e.target.value)}
+                  placeholder="e.g. Mohit"
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
                 />
-              </label>
+              </div>
             )}
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium">Email</span>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Email Address
+              </label>
               <input
                 type="email"
                 value={form.email}
-                onChange={(event) => updateField("email", event.target.value)}
+                onChange={(e) => updateField("email", e.target.value)}
                 placeholder="you@example.com"
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
               />
-            </label>
+            </div>
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium">Password</span>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Password
+              </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={form.password}
-                  onChange={(event) => updateField("password", event.target.value)}
-                  placeholder="Enter password"
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 pr-12 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
+                  onChange={(e) => updateField("password", e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 pr-12 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((current) => !current)}
-                  title={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--panel-muted)] hover:text-[var(--text)]"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--text)]"
                 >
-                  {showPassword ? (
-                    <EyeSlashIcon className="h-5 w-5" />
-                  ) : (
-                    <EyeIcon className="h-5 w-5" />
-                  )}
+                  {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
                 </button>
               </div>
-            </label>
+
+              {mode === "register" && form.password && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel-muted)]">
+                    <div
+                      className={`h-full transition-all duration-300 ${strength.color}`}
+                      style={{ width: `${(strength.score / 3) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-semibold text-[var(--muted)]">
+                    {strength.label}
+                  </span>
+                </div>
+              )}
+            </div>
 
             {error && (
-              <div className="animate-fade rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-[var(--danger)]">
+              <div className="animate-fade rounded-xl border border-[var(--danger-soft)] bg-[var(--danger-soft)] p-3 text-xs font-medium text-[var(--danger)]">
                 {error}
               </div>
             )}
@@ -238,11 +328,24 @@ export default function Auth() {
             <button
               type="submit"
               disabled={loading}
-              className="flex h-12 items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--app-bg)] transition hover:-translate-y-0.5 hover:bg-[var(--accent-strong)] disabled:opacity-60"
+              className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] text-sm font-semibold text-[var(--app-bg)] shadow-md shadow-[var(--accent-soft)] transition hover:-translate-y-0.5 hover:bg-[var(--accent-hover)] active:translate-y-0 disabled:opacity-60"
             >
-              {loading ? "Please wait..." : mode === "register" ? "Create account" : "Sign in"}
-              <ArrowRightIcon className="h-4 w-4" />
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--app-bg)] border-t-transparent" />
+                  Processing...
+                </span>
+              ) : (
+                <>
+                  <span>{mode === "register" ? "Create Account & Continue" : "Sign In to Workspace"}</span>
+                  <ArrowRightIcon className="h-4 w-4" />
+                </>
+              )}
             </button>
+          </div>
+
+          <div className="mt-6 text-center text-xs text-[var(--muted)]">
+            By continuing, you connect with the Secure MCP Backend API.
           </div>
         </form>
       </div>

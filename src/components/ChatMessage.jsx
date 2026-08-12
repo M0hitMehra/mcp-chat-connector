@@ -5,12 +5,19 @@ import {
   CheckIcon,
   ClipboardDocumentIcon,
   CpuChipIcon,
+  SpeakerWaveIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
 
-export default function ChatMessage({ message, isStreaming = false }) {
+export default function ChatMessage({
+  message,
+  isStreaming = false,
+  isSpeaking = false,
+  onSpeak,
+}) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const [copiedCodeId, setCopiedCodeId] = useState(null);
 
   const copyMessage = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -18,15 +25,22 @@ export default function ChatMessage({ message, isStreaming = false }) {
     setTimeout(() => setCopied(false), 1400);
   };
 
+  const copyCodeSnippet = async (codeText, id) => {
+    await navigator.clipboard.writeText(codeText);
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 1400);
+  };
+
   return (
     <article
-      className={`animate-rise flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}
+      className={`animate-rise flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}
     >
+      {/* Role Avatar */}
       <div
-        className={`mt-1 hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] sm:flex ${
+        className={`mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] ${
           isUser
-            ? "bg-[var(--accent)] text-[var(--app-bg)]"
-            : "bg-[var(--panel-strong)] text-[var(--accent)]"
+            ? "bg-[var(--accent)] text-[var(--app-bg)] shadow-md"
+            : "bg-[var(--panel-strong)] text-[var(--accent)] shadow-sm"
         }`}
       >
         {isUser ? (
@@ -36,21 +50,23 @@ export default function ChatMessage({ message, isStreaming = false }) {
         )}
       </div>
 
+      {/* Message Bubble Card */}
       <div
-        className={`min-w-0 max-w-[94%] rounded-lg border px-4 py-3 sm:max-w-[82%] ${
+        className={`min-w-0 max-w-[94%] rounded-2xl px-4 py-3.5 sm:max-w-[85%] shadow-sm ${
           isUser
-            ? "border-transparent bg-[var(--accent)] text-[var(--app-bg)]"
-            : "border-[var(--border)] bg-[var(--panel-strong)] text-[var(--text)]"
+            ? "bg-[var(--accent)] text-[var(--app-bg)]"
+            : "border border-[var(--border)] bg-[var(--panel-strong)] text-[var(--text)]"
         }`}
       >
+        {/* Header Metadata */}
         <div
-          className={`mb-2 flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.12em] ${
-            isUser ? "text-[var(--app-bg)]/75" : "text-[var(--faint)]"
+          className={`mb-2 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-wider ${
+            isUser ? "text-[var(--app-bg)]/80" : "text-[var(--faint)]"
           }`}
         >
-          <span>{isUser ? "You" : "Assistant"}</span>
+          <span>{isUser ? "You" : "MCP Assistant"}</span>
           {message.createdAt && (
-            <time className="shrink-0 normal-case tracking-normal opacity-70">
+            <time className="shrink-0 font-normal tracking-normal opacity-75">
               {new Date(message.createdAt).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -59,33 +75,34 @@ export default function ChatMessage({ message, isStreaming = false }) {
           )}
         </div>
 
+        {/* Content Body */}
         {isUser ? (
-          <div className="whitespace-pre-wrap break-words text-sm leading-6">
+          <div className="whitespace-pre-wrap break-words text-xs leading-relaxed sm:text-sm">
             {message.content}
           </div>
         ) : (
-          <div className="markdown-content text-sm leading-7">
+          <div className="markdown-content text-xs leading-relaxed sm:text-sm">
             {message.content ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
                   h1({ children }) {
                     return (
-                      <h1 className="mb-3 mt-4 text-2xl font-semibold text-[var(--text)]">
+                      <h1 className="mb-2 mt-3 text-xl font-bold tracking-tight text-[var(--text)]">
                         {children}
                       </h1>
                     );
                   },
                   h2({ children }) {
                     return (
-                      <h2 className="mb-3 mt-4 text-xl font-semibold text-[var(--text)]">
+                      <h2 className="mb-2 mt-3 text-lg font-bold tracking-tight text-[var(--text)]">
                         {children}
                       </h2>
                     );
                   },
                   h3({ children }) {
                     return (
-                      <h3 className="mb-2 mt-4 text-base font-semibold text-[var(--text)]">
+                      <h3 className="mb-1.5 mt-2.5 text-sm font-bold text-[var(--text)]">
                         {children}
                       </h3>
                     );
@@ -102,14 +119,14 @@ export default function ChatMessage({ message, isStreaming = false }) {
                   },
                   ul({ children }) {
                     return (
-                      <ul className="my-3 list-disc space-y-1 pl-5">
+                      <ul className="my-2 list-disc space-y-1 pl-5">
                         {children}
                       </ul>
                     );
                   },
                   ol({ children }) {
                     return (
-                      <ol className="my-3 list-decimal space-y-1 pl-5">
+                      <ol className="my-2 list-decimal space-y-1 pl-5">
                         {children}
                       </ol>
                     );
@@ -119,7 +136,7 @@ export default function ChatMessage({ message, isStreaming = false }) {
                   },
                   blockquote({ children }) {
                     return (
-                      <blockquote className="my-4 border-l-2 border-[var(--accent)] pl-4 text-[var(--muted)]">
+                      <blockquote className="my-3 border-l-2 border-[var(--accent)] pl-3 text-[var(--muted)] italic">
                         {children}
                       </blockquote>
                     );
@@ -130,7 +147,7 @@ export default function ChatMessage({ message, isStreaming = false }) {
                         href={href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-medium text-[var(--accent)] underline underline-offset-4"
+                        className="font-semibold text-[var(--accent)] underline underline-offset-4"
                       >
                         {children}
                       </a>
@@ -140,7 +157,7 @@ export default function ChatMessage({ message, isStreaming = false }) {
                     if (inline) {
                       return (
                         <code
-                          className="rounded-md bg-[var(--panel-muted)] px-1.5 py-0.5 font-mono text-xs text-[var(--text)]"
+                          className="rounded-md border border-[var(--border)] bg-[var(--panel-muted)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text)]"
                           {...props}
                         >
                           {children}
@@ -148,26 +165,36 @@ export default function ChatMessage({ message, isStreaming = false }) {
                       );
                     }
 
+                    const codeString = String(children).replace(/\n$/, "");
+                    const snippetId = String(Math.random());
+
                     return (
-                      <code
-                        className="block overflow-x-auto font-mono text-sm"
-                        {...props}
-                      >
-                        {children}
-                      </code>
-                    );
-                  },
-                  pre({ children }) {
-                    return (
-                      <pre className="my-4 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--panel-muted)] p-4 text-sm">
-                        {children}
-                      </pre>
+                      <div className="relative my-3 overflow-hidden rounded-xl border border-[var(--border-strong)] bg-[#0d1117] text-slate-100">
+                        <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-3 py-1.5 font-mono text-[10px] text-slate-400">
+                          <span>Code Snippet</span>
+                          <button
+                            type="button"
+                            onClick={() => copyCodeSnippet(codeString, snippetId)}
+                            className="flex items-center gap-1 text-[10px] text-slate-300 hover:text-white"
+                          >
+                            {copiedCodeId === snippetId ? (
+                              <CheckIcon className="h-3 w-3 text-emerald-400" />
+                            ) : (
+                              <ClipboardDocumentIcon className="h-3 w-3" />
+                            )}
+                            <span>{copiedCodeId === snippetId ? "Copied" : "Copy"}</span>
+                          </button>
+                        </div>
+                        <pre className="overflow-x-auto p-3 font-mono text-xs leading-relaxed text-slate-200">
+                          <code>{codeString}</code>
+                        </pre>
+                      </div>
                     );
                   },
                   table({ children }) {
                     return (
-                      <div className="my-4 overflow-x-auto rounded-lg border border-[var(--border)]">
-                        <table className="w-full border-collapse text-left text-sm">
+                      <div className="my-3 overflow-x-auto rounded-xl border border-[var(--border)]">
+                        <table className="w-full border-collapse text-left text-xs">
                           {children}
                         </table>
                       </div>
@@ -175,7 +202,7 @@ export default function ChatMessage({ message, isStreaming = false }) {
                   },
                   th({ children }) {
                     return (
-                      <th className="border-b border-[var(--border)] bg-[var(--panel-muted)] px-3 py-2 font-medium">
+                      <th className="border-b border-[var(--border)] bg-[var(--panel-muted)] px-3 py-2 font-semibold">
                         {children}
                       </th>
                     );
@@ -188,34 +215,53 @@ export default function ChatMessage({ message, isStreaming = false }) {
                     );
                   },
                   hr() {
-                    return <hr className="my-5 border-[var(--border)]" />;
+                    return <hr className="my-4 border-[var(--border)]" />;
                   },
                 }}
               >
                 {message.content}
               </ReactMarkdown>
             ) : (
-              <div className="flex items-center gap-1 py-2">
+              <div className="flex items-center gap-1.5 py-2">
                 <span className="streaming-dot h-2 w-2 rounded-full bg-[var(--accent)]" />
-                <span className="streaming-dot h-2 w-2 rounded-full bg-[var(--accent)] [animation-delay:120ms]" />
-                <span className="streaming-dot h-2 w-2 rounded-full bg-[var(--accent)] [animation-delay:240ms]" />
+                <span className="streaming-dot h-2 w-2 rounded-full bg-[var(--accent)] [animation-delay:150ms]" />
+                <span className="streaming-dot h-2 w-2 rounded-full bg-[var(--accent)] [animation-delay:300ms]" />
               </div>
             )}
 
+            {/* Actions Bar */}
             {!isStreaming && message.content && (
-              <button
-                type="button"
-                onClick={copyMessage}
-                title="Copy message"
-                className="mt-3 flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-[var(--muted)] transition hover:bg-[var(--panel-muted)] hover:text-[var(--text)]"
-              >
-                {copied ? (
-                  <CheckIcon className="h-4 w-4" />
-                ) : (
-                  <ClipboardDocumentIcon className="h-4 w-4" />
+              <div className="mt-3 flex items-center gap-2 border-t border-[var(--border)] pt-2">
+                <button
+                  type="button"
+                  onClick={copyMessage}
+                  title="Copy response text"
+                  className="flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] font-medium text-[var(--muted)] hover:bg-[var(--panel-muted)] hover:text-[var(--text)] transition"
+                >
+                  {copied ? (
+                    <CheckIcon className="h-3.5 w-3.5 text-[var(--emerald)]" />
+                  ) : (
+                    <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+                  )}
+                  <span>{copied ? "Copied" : "Copy"}</span>
+                </button>
+
+                {onSpeak && (
+                  <button
+                    type="button"
+                    onClick={onSpeak}
+                    title="Text-to-speech audio reader"
+                    className={`flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] font-medium transition ${
+                      isSpeaking
+                        ? "bg-[var(--accent-soft)] text-[var(--accent)] font-semibold animate-pulse"
+                        : "text-[var(--muted)] hover:bg-[var(--panel-muted)] hover:text-[var(--text)]"
+                    }`}
+                  >
+                    <SpeakerWaveIcon className="h-3.5 w-3.5" />
+                    <span>{isSpeaking ? "Speaking..." : "Read Aloud"}</span>
+                  </button>
                 )}
-                {copied ? "Copied" : "Copy"}
-              </button>
+              </div>
             )}
           </div>
         )}

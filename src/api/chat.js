@@ -1,16 +1,25 @@
 import axios from "axios";
 
 export const API_URL =
-  import.meta.env.VITE_API_URL || "https://chat-mcp-fastapi.onrender.com";
+  import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export const AUTH_TOKEN_KEY = "mcp_auth_token";
 export const AUTH_USER_KEY = "mcp_auth_user";
 
 export const getAuthToken = () => localStorage.getItem(AUTH_TOKEN_KEY);
 
+export const getAuthUser = () => {
+  const user = localStorage.getItem(AUTH_USER_KEY);
+  if (!user) return null;
+  try {
+    return JSON.parse(user);
+  } catch {
+    return null;
+  }
+};
+
 export const getAuthHeaders = () => {
   const token = getAuthToken();
-
   return token
     ? {
         Authorization: `Bearer ${token}`,
@@ -19,8 +28,9 @@ export const getAuthHeaders = () => {
 };
 
 export const setAuthSession = ({ token, user }) => {
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
-
+  if (token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+  }
   if (user) {
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
   }
@@ -44,14 +54,13 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = getAuthToken();
-
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
   return config;
 });
 
+// Backend API Wrappers
 export const registerUser = (payload) => api.post("/auth/register", payload);
 
 export const loginUser = (payload) => api.post("/auth/login", payload);

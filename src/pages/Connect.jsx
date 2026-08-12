@@ -4,13 +4,19 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   BoltIcon,
+  CheckBadgeIcon,
+  CpuChipIcon,
   EyeIcon,
   EyeSlashIcon,
+  GlobeAltIcon,
+  KeyIcon,
   MoonIcon,
   PlusIcon,
   ServerStackIcon,
+  SparklesIcon,
   SunIcon,
   TrashIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 
 import {
@@ -18,40 +24,67 @@ import {
   connectAgent,
   createThread,
   getAuthToken,
+  listSessions,
 } from "../api/chat";
 import useTheme from "../hooks/useTheme";
 
-const DEFAULT_MCP_URL =
-  "https://mcp-server-company-details.onrender.com/mcp";
-
-const DEFAULT_SERVERS = [
+const PRESET_MCP_SERVERS = [
   {
-    name: "Company Details",
-    url: DEFAULT_MCP_URL,
+    name: "Company Details MCP",
+    url: "https://mcp-server-company-details.onrender.com/mcp",
+    description: "Fetches company intelligence, market specs & metrics",
+    tag: "Recommended",
+  },
+  {
+    name: "Local/Custom MCP",
+    url: "http://localhost:8080/mcp",
+    description: "Connect to your local dev environment MCP endpoint",
+    tag: "Developer",
   },
 ];
 
-const MODEL_OPTIONS = [
-  "gemini-3.1-flash-lite",
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
+const MODEL_CARDS = [
+  {
+    id: "gemini-3.1-flash-lite",
+    name: "Gemini 3.1 Flash Lite",
+    badge: "Fastest",
+    speed: "⚡ Ultra Fast",
+    description: "Lightweight, optimized for high throughput & instant streaming responses.",
+  },
+  {
+    id: "gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
+    badge: "Balanced",
+    speed: "🚀 Fast & Smart",
+    description: "Balanced speed with enhanced function calling capability for complex tools.",
+  },
+  {
+    id: "gemini-2.5-pro",
+    name: "Gemini 2.5 Pro",
+    badge: "High Reasoning",
+    speed: "🧠 Deep Reasoning",
+    description: "Top-tier intelligence for high-complexity analytical and coding queries.",
+  },
 ];
 
 const loadSavedServers = () => {
   const savedServers = localStorage.getItem("mcp_server_presets");
-
   if (!savedServers) {
-    return DEFAULT_SERVERS;
+    return [
+      {
+        name: PRESET_MCP_SERVERS[0].name,
+        url: PRESET_MCP_SERVERS[0].url,
+      },
+    ];
   }
 
   try {
-    const parsedServers = JSON.parse(savedServers);
-
-    return Array.isArray(parsedServers) && parsedServers.length > 0
-      ? parsedServers
-      : DEFAULT_SERVERS;
+    const parsed = JSON.parse(savedServers);
+    return Array.isArray(parsed) && parsed.length > 0
+      ? parsed
+      : [{ name: PRESET_MCP_SERVERS[0].name, url: PRESET_MCP_SERVERS[0].url }];
   } catch {
-    return DEFAULT_SERVERS;
+    return [{ name: PRESET_MCP_SERVERS[0].name, url: PRESET_MCP_SERVERS[0].url }];
   }
 };
 
@@ -61,12 +94,16 @@ export default function Connect() {
 
   const [apiKey, setApiKey] = useState(sessionStorage.getItem("mcp_api_key") || "");
   const [model, setModel] = useState(
-    localStorage.getItem("mcp_model") || MODEL_OPTIONS[0]
+    localStorage.getItem("mcp_model") || MODEL_CARDS[0].id
   );
   const [mcpServers, setMcpServers] = useState(loadSavedServers);
   const [showApiKey, setShowApiKey] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [existingSessions, setExistingSessions] = useState([]);
+  const [selectedExistingSession, setSelectedExistingSession] = useState("");
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
   useEffect(() => {
     if (!getAuthToken()) {
@@ -82,42 +119,57 @@ export default function Connect() {
     localStorage.setItem("mcp_server_presets", JSON.stringify(mcpServers));
   }, [mcpServers]);
 
+  const fetchUserSessions = async () => {
+    setLoadingSessions(true);
+    try {
+      const res = await listSessions();
+      setExistingSessions(res.data?.data || []);
+    } catch (err) {
+      console.error("Failed to load existing sessions:", err);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserSessions();
+  }, []);
+
   const addMcpServer = () => {
     setMcpServers((current) => [
       ...current,
-      {
-        name: "",
-        url: "",
-      },
+      { name: "", url: "" },
+    ]);
+  };
+
+  const addPresetServer = (preset) => {
+    const exists = mcpServers.some((s) => s.url.trim() === preset.url);
+    if (exists) return;
+    setMcpServers((current) => [
+      ...current,
+      { name: preset.name, url: preset.url },
     ]);
   };
 
   const removeMcpServer = (index) => {
-    setMcpServers((current) =>
-      current.filter((_, currentIndex) => currentIndex !== index)
-    );
+    setMcpServers((current) => current.filter((_, i) => i !== index));
   };
 
   const updateMcpServer = (index, field, value) => {
     setMcpServers((current) =>
-      current.map((server, currentIndex) =>
-        currentIndex === index
-          ? {
-              ...server,
-              [field]: value,
-            }
-          : server
+      current.map((server, i) =>
+        i === index ? { ...server, [field]: value } : server
       )
     );
   };
 
   const validate = () => {
     if (!apiKey.trim()) {
-      return "Gemini API key is required.";
+      return "Gemini API key is required to initiate thread.";
     }
 
     if (!model.trim()) {
-      return "Gemini model is required.";
+      return "Please select a Gemini model.";
     }
 
     const activeServers = mcpServers.filter(
@@ -125,31 +177,24 @@ export default function Connect() {
     );
 
     if (activeServers.length === 0) {
-      return "Add at least one MCP server.";
+      return "Please configure at least one MCP server.";
     }
 
-    for (let index = 0; index < activeServers.length; index += 1) {
-      const server = activeServers[index];
-
-      if (!server.name.trim()) {
-        return `MCP server ${index + 1} needs a name.`;
-      }
-
-      if (!server.url.trim()) {
-        return `MCP server ${index + 1} needs a URL.`;
-      }
-
+    for (let i = 0; i < activeServers.length; i += 1) {
+      const s = activeServers[i];
+      if (!s.name.trim()) return `MCP server ${i + 1} requires a descriptive name.`;
+      if (!s.url.trim()) return `MCP server ${i + 1} requires a valid URL.`;
       try {
-        new URL(server.url);
+        new URL(s.url.trim());
       } catch {
-        return `MCP server ${index + 1} has an invalid URL.`;
+        return `MCP server ${i + 1} has an invalid URL format.`;
       }
     }
 
     return null;
   };
 
-  const logout = () => {
+  const handleLogout = () => {
     clearAuthSession();
     navigate("/");
   };
@@ -159,7 +204,6 @@ export default function Connect() {
     setError("");
 
     const validationError = validate();
-
     if (validationError) {
       setError(validationError);
       return;
@@ -175,13 +219,19 @@ export default function Connect() {
           url: server.url.trim(),
         }));
 
-      const sessionResponse = await connectAgent();
-      const sessionId = sessionResponse.data?.session_id;
+      let sessionId = selectedExistingSession;
 
+      // If no existing session chosen, spawn a new one via backend POST /connect
       if (!sessionId) {
-        throw new Error("Backend did not return a session ID.");
+        const sessionResponse = await connectAgent();
+        sessionId = sessionResponse.data?.session_id;
+
+        if (!sessionId) {
+          throw new Error("Backend did not return a session ID.");
+        }
       }
 
+      // Create thread via backend POST /threads
       const threadResponse = await createThread({
         session_id: sessionId,
         model_name: model,
@@ -190,7 +240,6 @@ export default function Connect() {
       });
 
       const threadId = threadResponse.data?.thread_id;
-
       if (!threadId) {
         throw new Error("Backend did not return a thread ID.");
       }
@@ -213,12 +262,11 @@ export default function Connect() {
       navigate("/chat");
     } catch (connectError) {
       console.error(connectError);
-
       setError(
         connectError.response?.data?.message ||
           connectError.response?.data?.detail ||
           connectError.message ||
-          "Unable to create chat thread."
+          "Failed to establish MCP thread configuration."
       );
     } finally {
       setLoading(false);
@@ -226,175 +274,249 @@ export default function Connect() {
   };
 
   return (
-    <main className="app-surface min-h-screen overflow-y-auto px-4 py-5 text-[var(--text)] sm:px-6 lg:px-8">
-      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-6xl flex-col justify-center gap-8 py-6 lg:grid lg:grid-cols-[0.86fr_1.14fr] lg:items-center">
-        <section className="animate-rise">
-          <div className="mb-8 flex items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] text-[var(--app-bg)]">
+    <main className="app-surface flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-6 lg:grid lg:grid-cols-[0.88fr_1.12fr] lg:items-start lg:gap-10">
+        
+        {/* Left Side: Overview & Active Sessions */}
+        <section className="animate-rise space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--app-bg)] shadow-md">
                 <ServerStackIcon className="h-6 w-6" />
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--faint)]">
-                  Thread setup
-                </p>
-                <h1 className="text-2xl font-semibold tracking-normal text-[var(--text)] sm:text-3xl">
-                  Configure Gemini and MCP
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">
+                  Step 2 • Configuration
+                </span>
+                <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
+                  Workspace Setup
                 </h1>
               </div>
             </div>
 
-            <div className="flex shrink-0 gap-2">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={toggleTheme}
                 title="Toggle theme"
-                className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--panel)] transition hover:-translate-y-0.5"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--text)]"
               >
-                {isDark ? (
-                  <SunIcon className="h-5 w-5" />
-                ) : (
-                  <MoonIcon className="h-5 w-5" />
-                )}
+                {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
               </button>
               <button
                 type="button"
-                onClick={logout}
+                onClick={handleLogout}
                 title="Sign out"
-                className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--panel)] text-[var(--danger)] transition hover:-translate-y-0.5"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] text-[var(--danger)] transition hover:bg-red-500/10"
               >
                 <ArrowLeftIcon className="h-5 w-5" />
               </button>
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-            <div className="soft-panel rounded-lg p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-[var(--faint)]">
-                Step 1
-              </p>
-              <p className="mt-2 text-sm font-semibold">Create secure session</p>
+          {/* Preset Library Card */}
+          <div className="glass-panel rounded-2xl p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                <SparklesIcon className="h-4 w-4 text-[var(--accent)]" />
+                MCP Server Presets
+              </h2>
+              <span className="text-[11px] text-[var(--faint)]">1-Click Add</span>
             </div>
-            <div className="soft-panel rounded-lg p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-[var(--faint)]">
-                Step 2
-              </p>
-              <p className="mt-2 text-sm font-semibold">Save thread config</p>
+
+            <div className="space-y-2.5">
+              {PRESET_MCP_SERVERS.map((preset) => (
+                <div
+                  key={preset.url}
+                  className="soft-panel flex items-center justify-between gap-3 rounded-xl p-3 transition hover:border-[var(--accent-border)]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-xs font-semibold text-[var(--text)]">{preset.name}</span>
+                      <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[9px] font-bold text-[var(--accent)]">
+                        {preset.tag}
+                      </span>
+                    </div>
+                    <p className="truncate text-[11px] text-[var(--muted)]">{preset.description}</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => addPresetServer(preset)}
+                    className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[var(--accent-soft)] px-3 text-xs font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)] hover:text-[var(--app-bg)]"
+                  >
+                    <PlusIcon className="h-3.5 w-3.5" />
+                    Add
+                  </button>
+                </div>
+              ))}
             </div>
-            <div className="soft-panel rounded-lg p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-[var(--faint)]">
-                Step 3
-              </p>
-              <p className="mt-2 text-sm font-semibold">Stream responses</p>
+          </div>
+
+          {/* Active Sessions Quick Picker */}
+          <div className="glass-panel rounded-2xl p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                <GlobeAltIcon className="h-4 w-4 text-[var(--emerald)]" />
+                Backend Sessions
+              </h2>
+              <button
+                type="button"
+                onClick={fetchUserSessions}
+                className="text-[11px] text-[var(--accent)] hover:underline"
+              >
+                {loadingSessions ? <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" /> : "Refresh"}
+              </button>
             </div>
+
+            {existingSessions.length > 0 ? (
+              <div className="space-y-2">
+                <label className="block text-[11px] text-[var(--muted)]">
+                  Pick an existing backend session or spawn a new one:
+                </label>
+                <select
+                  value={selectedExistingSession}
+                  onChange={(e) => setSelectedExistingSession(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2.5 text-xs text-[var(--text)] outline-none font-mono"
+                >
+                  <option value="">✨ Generate fresh high-performance session</option>
+                  {existingSessions.map((s) => (
+                    <option key={s.session_id || s._id} value={s.session_id}>
+                      Reuse Session: {s.session_id}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--muted)]">
+                No prior session documents found. A new session will automatically be instantiated on submission.
+              </p>
+            )}
           </div>
         </section>
 
+        {/* Right Side: Setup Form */}
         <form
           onSubmit={handleConnect}
-          className="glass-panel animate-rise rounded-lg p-4 sm:p-6"
+          className="glass-panel-strong animate-scale rounded-2xl p-6 sm:p-8"
         >
-          <div className="grid gap-5">
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium">Gemini API Key</span>
+          <h2 className="mb-5 text-lg font-bold tracking-tight text-[var(--text)]">
+            Configure Gemini & MCP Servers
+          </h2>
+
+          <div className="space-y-5">
+            {/* Gemini API Key */}
+            <div>
+              <label className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                <span className="flex items-center gap-1.5">
+                  <KeyIcon className="h-4 w-4 text-[var(--accent)]" />
+                  Gemini API Key
+                </span>
+                <span className="text-[10px] text-[var(--faint)]">Stored locally</span>
+              </label>
               <div className="relative">
                 <input
                   type={showApiKey ? "text" : "password"}
                   value={apiKey}
-                  onChange={(event) => setApiKey(event.target.value)}
-                  placeholder="Enter Gemini API key"
-                  autoComplete="off"
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 pr-12 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 pr-12 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowApiKey((current) => !current)}
-                  title={showApiKey ? "Hide API key" : "Show API key"}
-                  className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--panel-muted)] hover:text-[var(--text)]"
+                  onClick={() => setShowApiKey((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--text)]"
                 >
-                  {showApiKey ? (
-                    <EyeSlashIcon className="h-5 w-5" />
-                  ) : (
-                    <EyeIcon className="h-5 w-5" />
-                  )}
+                  {showApiKey ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
                 </button>
               </div>
-            </label>
+            </div>
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium">Gemini Model</span>
-              <select
-                value={model}
-                onChange={(event) => setModel(event.target.value)}
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
-              >
-                {MODEL_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-
+            {/* Model Selection Cards */}
             <div>
-              <div className="mb-3 flex items-center justify-between gap-3">
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Select Gemini Model
+              </label>
+              <div className="grid gap-2.5 sm:grid-cols-3">
+                {MODEL_CARDS.map((card) => (
+                  <button
+                    key={card.id}
+                    type="button"
+                    onClick={() => setModel(card.id)}
+                    className={`flex flex-col justify-between rounded-xl border p-3 text-left transition ${
+                      model === card.id
+                        ? "border-[var(--accent)] bg-[var(--accent-soft)] ring-2 ring-[var(--accent-soft)]"
+                        : "border-[var(--border)] bg-[var(--panel-strong)] hover:border-[var(--accent-border)]"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-bold text-[var(--text)]">{card.badge}</span>
+                        {model === card.id && <CheckBadgeIcon className="h-4 w-4 text-[var(--accent)]" />}
+                      </div>
+                      <p className="mt-1 text-[11px] font-semibold text-[var(--muted)]">{card.speed}</p>
+                    </div>
+                    <p className="mt-2 text-[10px] leading-snug text-[var(--faint)]">{card.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* MCP Servers Manager */}
+            <div>
+              <div className="mb-3 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold">MCP Servers</h2>
-                  <p className="text-xs text-[var(--muted)]">
-                    Used when creating the backend thread
-                  </p>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                    Target MCP Servers
+                  </h3>
+                  <p className="text-[11px] text-[var(--faint)]">Tools available to agent during execution</p>
                 </div>
                 <button
                   type="button"
                   onClick={addMcpServer}
-                  title="Add MCP server"
-                  className="flex h-10 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 text-sm font-medium transition hover:-translate-y-0.5 hover:border-[var(--accent)]"
+                  className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
                 >
-                  <PlusIcon className="h-4 w-4" />
-                  Add
+                  <PlusIcon className="h-3.5 w-3.5" />
+                  Add Server
                 </button>
               </div>
 
-              <div className="grid max-h-[36vh] gap-3 overflow-y-auto pr-1 scroll-area sm:max-h-[42vh]">
+              <div className="scroll-area max-h-48 space-y-3 overflow-y-auto pr-1">
                 {mcpServers.map((server, index) => (
                   <div
-                    key={`${index}-${server.url}`}
-                    className="soft-panel animate-fade rounded-lg p-3"
+                    key={index}
+                    className="soft-panel rounded-xl p-3 space-y-2 animate-fade"
                   >
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--faint)]">
-                        <BoltIcon className="h-4 w-4" />
-                        Server {index + 1}
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--muted)]">
+                      <span className="flex items-center gap-1">
+                        <BoltIcon className="h-3.5 w-3.5 text-[var(--accent)]" />
+                        Server #{index + 1}
                       </span>
-
                       {mcpServers.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeMcpServer(index)}
-                          title="Remove MCP server"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-red-500/10 hover:text-[var(--danger)]"
+                          className="text-[var(--muted)] hover:text-[var(--danger)]"
                         >
-                          <TrashIcon className="h-4 w-4" />
+                          <TrashIcon className="h-3.5 w-3.5" />
                         </button>
                       )}
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-[0.42fr_0.58fr]">
+                    <div className="grid gap-2 sm:grid-cols-[0.4fr_0.6fr]">
                       <input
+                        type="text"
                         value={server.name}
-                        onChange={(event) =>
-                          updateMcpServer(index, "name", event.target.value)
-                        }
-                        placeholder="Server name"
-                        className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
+                        onChange={(e) => updateMcpServer(index, "name", e.target.value)}
+                        placeholder="Server Name"
+                        className="rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--text)] outline-none focus:border-[var(--accent)]"
                       />
                       <input
+                        type="text"
                         value={server.url}
-                        onChange={(event) =>
-                          updateMcpServer(index, "url", event.target.value)
-                        }
-                        placeholder="https://your-server.com/mcp"
-                        className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent-soft)]"
+                        onChange={(e) => updateMcpServer(index, "url", e.target.value)}
+                        placeholder="https://.../mcp"
+                        className="rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2 text-xs text-[var(--text)] outline-none focus:border-[var(--accent)] font-mono"
                       />
                     </div>
                   </div>
@@ -403,7 +525,7 @@ export default function Connect() {
             </div>
 
             {error && (
-              <div className="animate-fade rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-[var(--danger)]">
+              <div className="animate-fade rounded-xl border border-[var(--danger-soft)] bg-[var(--danger-soft)] p-3 text-xs font-medium text-[var(--danger)]">
                 {error}
               </div>
             )}
@@ -411,10 +533,19 @@ export default function Connect() {
             <button
               type="submit"
               disabled={loading}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--app-bg)] transition hover:-translate-y-0.5 hover:bg-[var(--accent-strong)] disabled:opacity-60"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] text-sm font-semibold text-[var(--app-bg)] shadow-md shadow-[var(--accent-soft)] transition hover:-translate-y-0.5 hover:bg-[var(--accent-hover)] active:translate-y-0 disabled:opacity-60"
             >
-              {loading ? "Creating thread..." : "Start chat"}
-              <ArrowRightIcon className="h-4 w-4" />
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--app-bg)] border-t-transparent" />
+                  Creating Thread...
+                </span>
+              ) : (
+                <>
+                  <span>Initialize Agent Workspace</span>
+                  <ArrowRightIcon className="h-4 w-4" />
+                </>
+              )}
             </button>
           </div>
         </form>

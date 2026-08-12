@@ -1,16 +1,16 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useRef } from "react";
 import { API_URL, getAuthHeaders } from "../api/chat";
 
 const createWelcomeMessage = () => ({
   id: crypto.randomUUID(),
   role: "assistant",
   content:
-    "Thread ready. Ask anything, or let the agent use your MCP servers when a tool can help.",
+    "### Agent Ready\nAsk anything or prompt the model to leverage your configured **MCP Tools** (database lookups, company details, external APIs).",
   createdAt: new Date().toISOString(),
 });
 
 const normalizeMessage = (message) => ({
-  id: message.id || crypto.randomUUID(),
+  id: message.id || message._id || crypto.randomUUID(),
   role: message.role,
   content: message.content || "",
   createdAt: message.createdAt || message.created_at || new Date().toISOString(),
@@ -30,7 +30,6 @@ const loadStoredMessages = (storageKey) => {
 
   try {
     const parsedMessages = JSON.parse(savedMessages);
-
     return Array.isArray(parsedMessages) && parsedMessages.length > 0
       ? parsedMessages.map(normalizeMessage)
       : [createWelcomeMessage()];
@@ -39,15 +38,15 @@ const loadStoredMessages = (storageKey) => {
   }
 };
 
-const createTranscript = (messages) =>
+const createMarkdownTranscript = (messages) =>
   messages
     .map((message) => {
-      const label = message.role === "user" ? "You" : "Assistant";
+      const label = message.role === "user" ? "### User" : "### Assistant";
       const time = message.createdAt
         ? new Date(message.createdAt).toLocaleString()
         : "";
 
-      return `[${time}] ${label}\n${message.content}`;
+      return `${label} (${time})\n${message.content}`;
     })
     .join("\n\n---\n\n");
 
@@ -60,6 +59,10 @@ export default function useChat({ sessionId, threadId, modelName }) {
   const [messages, setMessages] = useState(() => loadStoredMessages(storageKey));
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState("");
+  const [lastLatencyMs, setLastLatencyMs] = useState(null);
+  const [speakingMessageId, setSpeakingMessageId] = useState(null);
+
+  const startTimeRef = useRef(null);
 
   const persistMessages = useCallback(
     (nextMessages) => {
@@ -71,7 +74,7 @@ export default function useChat({ sessionId, threadId, modelName }) {
   const replaceMessages = useCallback(
     (nextMessages) => {
       const normalizedMessages =
-        nextMessages.length > 0
+        nextMessages && nextMessages.length > 0
           ? nextMessages.map(normalizeMessage)
           : [createWelcomeMessage()];
 
@@ -165,11 +168,12 @@ export default function useChat({ sessionId, threadId, modelName }) {
       }
 
       if (!sessionId || !threadId) {
-        setError("Session or thread not found. Please create a chat again.");
+        setError("Active session or thread missing. Please connect again.");
         return;
       }
 
       setError("");
+      startTimeRef.current = performance.now();
 
       const userMessage = {
         id: crypto.randomUUID(),
@@ -209,7 +213,7 @@ export default function useChat({ sessionId, threadId, modelName }) {
         });
 
         if (!response.ok) {
-          let errorMessage = "Chat request failed.";
+          let errorMessage = "Chat API request failed.";
 
           try {
             const data = await response.json();
@@ -222,21 +226,26 @@ export default function useChat({ sessionId, threadId, modelName }) {
         }
 
         if (!response.body) {
-          throw new Error("Streaming response is not supported.");
+          throw new Error("Streaming response is not supported by standard fetch.");
         }
 
         await readStream(response, assistantId);
+
+        if (startTimeRef.current) {
+          const duration = Math.round(performance.now() - startTimeRef.current);
+          setLastLatencyMs(duration);
+        }
       } catch (requestError) {
         console.error(requestError);
 
-        setError(requestError.message || "Something went wrong.");
+        setError(requestError.message || "Unable to reach assistant agent.");
 
         setMessages((current) => {
           const nextMessages = current.map((currentMessage) =>
             currentMessage.id === assistantId
               ? {
                   ...currentMessage,
-                  content: "Unable to get a response from the agent.",
+                  content: "⚠️ Unable to complete request. Please verify backend connection and API key configuration.",
                 }
               : currentMessage
           );
@@ -256,11 +265,11 @@ export default function useChat({ sessionId, threadId, modelName }) {
   }, [replaceMessages]);
 
   const copyTranscript = useCallback(async () => {
-    await navigator.clipboard.writeText(createTranscript(messages));
+    await navigator.clipboard.writeText(createMarkdownTranscript(messages));
   }, [messages]);
 
-  const downloadTranscript = useCallback(() => {
-    const transcript = createTranscript(messages);
+  const downloadMarkdown = useCallback(() => {
+    const transcript = createMarkdownTranscript(messages);
     const blob = new Blob([transcript], {
       type: "text/markdown;charset=utf-8",
     });
@@ -269,19 +278,64 @@ export default function useChat({ sessionId, threadId, modelName }) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 
     anchor.href = url;
-    anchor.download = `mcp-chat-${timestamp}.md`;
+    anchor.download = `mcp-thread-${threadId || "export"}-${timestamp}.md`;
     anchor.click();
     URL.revokeObjectURL(url);
-  }, [messages]);
+  }, [messages, threadId]);
+
+  const downloadJson = useCallback(() => {
+    const jsonStr = JSON.stringify(messages, null, 2);
+    const blob = new Blob([jsonStr], {
+      type: "application/json;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+    anchor.href = url;
+    anchor.download = `mcp-thread-${threadId || "export"}-${timestamp}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }, [messages, threadId]);
+
+  const speakMessage = useCallback((messageId, text) => {
+    if (!("speechSynthesis" in window)) {
+      return;
+    }
+
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      if (speakingMessageId === messageId) {
+        setSpeakingMessageId(null);
+        return;
+      }
+    }
+
+    const cleanText = text.replace(/[*_#`~[\]()]/g, "").trim();
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 1.0;
+
+    utterance.onend = () => setSpeakingMessageId(null);
+    utterance.onerror = () => setSpeakingMessageId(null);
+
+    setSpeakingMessageId(messageId);
+    window.speechSynthesis.speak(utterance);
+  }, [speakingMessageId]);
 
   return {
     messages,
     isStreaming,
     error,
+    lastLatencyMs,
+    speakingMessageId,
     sendMessage,
     clearMessages,
     copyTranscript,
-    downloadTranscript,
+    downloadMarkdown,
+    downloadJson,
+    speakMessage,
     replaceMessages,
   };
 }
