@@ -1,5 +1,5 @@
    {
      "redirects": [
-       { "source": "/:path*", "destination": "/index.html", "status": 200 }
+       { "source": "/:path*", "destination": "/index.html" }
      ]
    }
