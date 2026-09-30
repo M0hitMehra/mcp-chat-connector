@@ -788,7 +788,7 @@ export default function Chat() {
                     onClick={() =>
                       setConfigDraft((prev) => ({
                         ...prev,
-                        mcp_servers: [...prev.mcp_servers, { name: "", url: "" }],
+                        mcp_servers: [...prev.mcp_servers, { name: "", url: "", token:""}],
                       }))
                     }
                     className="text-[var(--accent)] hover:underline"
@@ -830,6 +830,23 @@ export default function Chat() {
                         placeholder="https://.../mcp"
                         className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--text)] font-mono"
                       />
+
+                      <input
+                        type="text"
+                        value={s.token}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setConfigDraft((prev) => ({
+                            ...prev,
+                            mcp_servers: prev.mcp_servers.map((item, idx) =>
+                              idx === i ? { ...item, token: val } : item
+                            ),
+                          }));
+                        }}
+                        placeholder="api key(optional)"
+                        className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-2.5 py-1.5 text-xs text-[var(--text)] font-mono"
+                      />
+
                       <button
                         type="button"
                         onClick={() =>
