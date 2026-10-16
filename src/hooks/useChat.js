@@ -16,10 +16,10 @@ const normalizeMessage = (message) => ({
   createdAt: message.createdAt || message.created_at || new Date().toISOString(),
 });
 
-const createStorageKey = (sessionId, threadId) =>
-  sessionId && threadId
-    ? `mcp_chat_messages_${sessionId}_${threadId}`
-    : "mcp_chat_messages_draft";
+const createStorageKey = (sessionId, threadId, storagePrefix) =>
+  threadId
+    ? `${storagePrefix}_${sessionId || "default"}_${threadId}`
+    : `${storagePrefix}_draft`;
 
 const loadStoredMessages = (storageKey) => {
   const savedMessages = localStorage.getItem(storageKey);
@@ -50,10 +50,10 @@ const createMarkdownTranscript = (messages) =>
     })
     .join("\n\n---\n\n");
 
-export default function useChat({ sessionId, threadId, modelName }) {
+export default function useChat({ sessionId, threadId, modelName, chatEndpoint = "/chat", storagePrefix = "mcp_chat_messages" }) {
   const storageKey = useMemo(
-    () => createStorageKey(sessionId, threadId),
-    [sessionId, threadId]
+    () => createStorageKey(sessionId, threadId, storagePrefix),
+    [sessionId, storagePrefix, threadId]
   );
 
   const [messages, setMessages] = useState(() => loadStoredMessages(storageKey));
@@ -167,8 +167,8 @@ export default function useChat({ sessionId, threadId, modelName }) {
         return;
       }
 
-      if (!sessionId || !threadId) {
-        setError("Active session or thread missing. Please connect again.");
+      if (!threadId) {
+        setError("Active thread missing.");
         return;
       }
 
@@ -198,7 +198,7 @@ export default function useChat({ sessionId, threadId, modelName }) {
       setIsStreaming(true);
 
       try {
-        const response = await fetch(`${API_URL}/chat`, {
+        const response = await fetch(`${API_URL}${chatEndpoint}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -257,7 +257,7 @@ export default function useChat({ sessionId, threadId, modelName }) {
         setIsStreaming(false);
       }
     },
-    [isStreaming, modelName, persistMessages, readStream, sessionId, threadId]
+    [chatEndpoint, isStreaming, modelName, persistMessages, readStream, sessionId, threadId]
   );
 
   const clearMessages = useCallback(() => {

@@ -12,11 +12,9 @@ import {
   Cog6ToothIcon,
   CommandLineIcon,
   ChevronDownIcon,
-  HeartIcon,
   MagnifyingGlassIcon,
   MoonIcon,
   PlusIcon,
-  SignalIcon,
   SparklesIcon,
   SunIcon,
   TrashIcon,
@@ -27,16 +25,17 @@ import {
   checkHealth,
   clearAuthSession,
   createThread,
-  deleteSession,
   getAuthToken,
+  getSavedApiKey,
   getThreadMessages,
-  listSessions,
   listThreads,
   updateThreadConfig,
+  saveThreadDefaults,
 } from "../api/chat";
 import ChatMessage from "../components/ChatMessage";
 import MessageInput from "../components/MessageInput";
 import CommandPalette from "../components/CommandPalette";
+import ThreadDefaultsModal from "../components/ThreadDefaultsModal";
 import useChat from "../hooks/useChat";
 import useTheme from "../hooks/useTheme";
 
@@ -83,9 +82,12 @@ export default function Chat() {
   const navigate = useNavigate();
   const bottomRef = useRef(null);
   const scrollContainerRef = useRef(null);
+  const initialThreadResolvedRef = useRef(false);
+  const initialThreadCreationStartedRef = useRef(false);
+  const createAfterSetupRef = useRef(false);
   const { isDark, toggleTheme } = useTheme();
 
-  const [sessionId] = useState(localStorage.getItem("mcp_session_id") || "");
+  const sessionId = localStorage.getItem("mcp_session_id") || "";
   const [threadId, setThreadId] = useState(localStorage.getItem("mcp_thread_id") || "");
   const [threadName, setThreadName] = useState(
     localStorage.getItem("mcp_thread_name") || "New Chat"
@@ -97,11 +99,13 @@ export default function Chat() {
     })
   );
 
-  const [sessions, setSessions] = useState([]);
   const [threads, setThreads] = useState([]);
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
+  const [threadDefaultsOpen, setThreadDefaultsOpen] = useState(false);
+  const [defaultApiKey, setDefaultApiKey] = useState(getSavedApiKey);
+  const [defaultModel, setDefaultModel] = useState(() => localStorage.getItem("mcp_model") || MODEL_OPTIONS[0]);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [threadSearch, setThreadSearch] = useState("");
   const [transcriptCopied, setTranscriptCopied] = useState(false);
@@ -148,12 +152,53 @@ export default function Chat() {
     setLoadingMeta(true);
     setPageError("");
     try {
-      const [sessionsResponse, threadsResponse] = await Promise.all([
-        listSessions(),
-        listThreads(),
-      ]);
-      setSessions(sessionsResponse.data?.data || []);
-      setThreads(threadsResponse.data?.threads || []);
+      const threadsResponse = await listThreads();
+      const nextThreads = threadsResponse.data?.threads || [];
+      setThreads(nextThreads);
+      if (!nextThreads.length) {
+        if (!initialThreadCreationStartedRef.current) {
+          initialThreadCreationStartedRef.current = true;
+          const apiKey = defaultApiKey.trim();
+          const reusableSessionId = sessionId;
+          if (!apiKey) {
+            createAfterSetupRef.current = true;
+            setThreadDefaultsOpen(true);
+          } else {
+            try {
+              const created = await createThread({
+                session_id: reusableSessionId,
+                model_name: defaultModel || threadConfig.model_name || MODEL_OPTIONS[0],
+                apiKey,
+                mcp_servers: threadConfig.mcp_servers || [],
+              });
+              const createdThreadId = created.data?.thread_id;
+              if (!createdThreadId) throw new Error("Backend did not return a thread ID.");
+              const createdName = created.data?.thread_name || "New Chat";
+              const createdConfig = { ...threadConfig, model_name: defaultModel || MODEL_OPTIONS[0] };
+              setThreadId(createdThreadId);
+              setThreadName(createdName);
+              setThreadConfig(createdConfig);
+              setThreads([{ thread_id: createdThreadId, thread_name: createdName }, ...nextThreads]);
+              localStorage.setItem("mcp_thread_config", JSON.stringify(createdConfig));
+              localStorage.setItem("mcp_session_id", reusableSessionId);
+              localStorage.setItem("mcp_thread_id", createdThreadId);
+              localStorage.setItem("mcp_thread_name", createdName);
+              saveThreadDefaults({ apiKey, modelName: defaultModel });
+            } catch (createError) {
+              setPageError(createError.response?.data?.detail || createError.response?.data?.message || createError.message || "Unable to create a chat.");
+            }
+          }
+        }
+      } else if (!initialThreadResolvedRef.current || !nextThreads.some((thread) => thread.thread_id === threadId)) {
+        const latest = [...nextThreads].sort(
+          (a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0)
+        )[0];
+        initialThreadResolvedRef.current = true;
+        setThreadId(latest.thread_id);
+        setThreadName(latest.thread_name || "New Chat");
+        localStorage.setItem("mcp_thread_id", latest.thread_id);
+        localStorage.setItem("mcp_thread_name", latest.thread_name || "New Chat");
+      }
     } catch (metaError) {
       console.error(metaError);
       setPageError(
@@ -164,7 +209,8 @@ export default function Chat() {
     } finally {
       setLoadingMeta(false);
     }
-  }, []);
+  }, [defaultApiKey, defaultModel, sessionId, threadId, threadConfig]);
+  const initialRefreshRef = useRef(refreshMeta);
 
   const loadThreadMessages = useCallback(
     async (nextThreadId) => {
@@ -184,14 +230,11 @@ export default function Chat() {
       navigate("/");
       return;
     }
-    if (!sessionId || !threadId) {
-      navigate("/connect");
-    }
-  }, [navigate, sessionId, threadId]);
+  }, [navigate]);
 
   useEffect(() => {
-    refreshMeta();
-  }, [refreshMeta]);
+    initialRefreshRef.current();
+  }, []);
 
   useEffect(() => {
     loadThreadMessages(threadId);
@@ -220,17 +263,22 @@ export default function Chat() {
     setDrawerOpen(false);
   };
 
-  const createNewThread = async () => {
-    const apiKey = sessionStorage.getItem("mcp_api_key");
+  const createNewThread = async (providedApiKey = defaultApiKey, providedModel = defaultModel) => {
+    const apiKey = providedApiKey.trim();
     if (!apiKey) {
-      navigate("/connect");
+      createAfterSetupRef.current = true;
+      setThreadDefaultsOpen(true);
+      return;
+    }
+    if (!sessionId) {
+      setPageError("The backend has no reusable session for creating another chat.");
       return;
     }
 
     try {
       const response = await createThread({
         session_id: sessionId,
-        model_name: threadConfig.model_name || MODEL_OPTIONS[0],
+        model_name: providedModel || threadConfig.model_name || MODEL_OPTIONS[0],
         apiKey,
         mcp_servers: threadConfig.mcp_servers || [],
       });
@@ -241,6 +289,12 @@ export default function Chat() {
       }
 
       const nextName = response.data?.thread_name || "New Chat";
+      const nextConfig = { ...threadConfig, model_name: providedModel || MODEL_OPTIONS[0] };
+      saveThreadDefaults({ apiKey, modelName: nextConfig.model_name });
+      setDefaultApiKey(apiKey);
+      setDefaultModel(nextConfig.model_name);
+      setThreadConfig(nextConfig);
+      localStorage.setItem("mcp_thread_config", JSON.stringify(nextConfig));
       setThreadId(nextThreadId);
       setThreadName(nextName);
       localStorage.setItem("mcp_thread_id", nextThreadId);
@@ -255,6 +309,19 @@ export default function Chat() {
           threadError.response?.data?.detail ||
           "Failed to create new thread."
       );
+    }
+  };
+
+  const saveDefaultsAndContinue = async () => {
+    const apiKey = defaultApiKey.trim();
+    if (!apiKey) return;
+    saveThreadDefaults({ apiKey, modelName: defaultModel });
+    setDefaultApiKey(apiKey);
+    setThreadConfig((current) => ({ ...current, model_name: defaultModel }));
+    setThreadDefaultsOpen(false);
+    if (createAfterSetupRef.current) {
+      createAfterSetupRef.current = false;
+      await createNewThread(apiKey, defaultModel);
     }
   };
 
@@ -274,7 +341,8 @@ export default function Chat() {
 
       if (configDraft.api_key.trim()) {
         payload.api_key = configDraft.api_key.trim();
-        sessionStorage.setItem("mcp_api_key", configDraft.api_key.trim());
+        saveThreadDefaults({ apiKey: configDraft.api_key.trim(), modelName: payload.model_name });
+        setDefaultApiKey(configDraft.api_key.trim());
       }
 
       await updateThreadConfig(threadId, payload);
@@ -290,6 +358,7 @@ export default function Chat() {
       };
 
       setThreadConfig(nextConfig);
+      setDefaultModel(payload.model_name);
       localStorage.setItem("mcp_thread_config", JSON.stringify(nextConfig));
       localStorage.setItem("mcp_model", payload.model_name);
       localStorage.setItem("mcp_server_presets", JSON.stringify(payload.mcp_servers));
@@ -307,27 +376,7 @@ export default function Chat() {
     }
   };
 
-  const handleDeleteSession = async (targetSessionId) => {
-    try {
-      await deleteSession(targetSessionId);
-      refreshMeta();
-      if (targetSessionId === sessionId) {
-        clearAuthSession();
-        navigate("/");
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const handleLogout = async () => {
-    if (sessionId) {
-      try {
-        await deleteSession(sessionId);
-      } catch (sessionError) {
-        console.error("Backend session deletion bypass:", sessionError);
-      }
-    }
     clearAuthSession();
     navigate("/");
   };
@@ -338,8 +387,23 @@ export default function Chat() {
     setTimeout(() => setTranscriptCopied(false), 1400);
   };
 
-  if (!sessionId || !threadId) {
-    return null;
+  if (!threadId) {
+    return (
+      <main className="app-surface flex min-h-screen items-center justify-center p-6 text-center">
+        <div className="glass-panel-strong w-full max-w-lg rounded-2xl p-8">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+          <h1 className="text-lg font-semibold text-[var(--text)]">
+            {pageError ? "Unable to load your chats" : "Loading your latest chat…"}
+          </h1>
+          {pageError && <p className="mt-3 text-sm text-[var(--danger)]">{pageError}</p>}
+          {pageError && (
+            <button onClick={() => { initialThreadCreationStartedRef.current = false; refreshMeta(); }} className="mt-5 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white">
+              Retry
+            </button>
+          )}
+        </div>
+      </main>
+    );
   }
 
   const filteredThreads = threads.filter((t) =>
@@ -389,6 +453,15 @@ export default function Chat() {
           New Chat Thread
         </button>
 
+        <button
+          type="button"
+          onClick={() => navigate("/pitch")}
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-soft)] text-xs font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)] hover:text-[var(--app-bg)]"
+        >
+          <SparklesIcon className="h-4 w-4" />
+          Company Pitch
+        </button>
+
         {/* Command Palette Trigger */}
         <button
           type="button"
@@ -403,27 +476,6 @@ export default function Chat() {
             Cmd K
           </kbd>
         </button>
-
-        {/* Connected Session Status */}
-        <div className="soft-panel rounded-xl p-3">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text)]">
-              <span className="h-2 w-2 rounded-full bg-[var(--emerald)] pulse-active" />
-              Connected Session
-            </span>
-            <button
-              type="button"
-              onClick={() => handleDeleteSession(sessionId)}
-              title="Delete session"
-              className="text-[var(--muted)] hover:text-[var(--danger)]"
-            >
-              <TrashIcon className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div className="mt-2 truncate font-mono text-[11px] text-[var(--muted)]">
-            {sessionId}
-          </div>
-        </div>
 
         {/* Threads List */}
         <div>
@@ -481,27 +533,6 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* Sessions Summary */}
-        <div>
-          <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[var(--faint)]">
-            <span>Sessions History</span>
-            <span>{sessions.length}</span>
-          </div>
-          <div className="space-y-1">
-            {sessions.slice(0, 3).map((s) => (
-              <div
-                key={s.session_id || s._id}
-                className={`flex items-center justify-between rounded-lg border px-2.5 py-1.5 font-mono text-[10px] ${
-                  s.session_id === sessionId
-                    ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)]"
-                    : "border-[var(--border)] text-[var(--muted)]"
-                }`}
-              >
-                <span className="truncate">{s.session_id}</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Sidebar Footer Actions */}
@@ -876,6 +907,16 @@ export default function Chat() {
           </div>
         </div>
       )}
+
+      <ThreadDefaultsModal
+        open={threadDefaultsOpen}
+        apiKey={defaultApiKey}
+        setApiKey={setDefaultApiKey}
+        model={defaultModel}
+        setModel={setDefaultModel}
+        onSave={saveDefaultsAndContinue}
+        onClose={() => { createAfterSetupRef.current = false; setThreadDefaultsOpen(false); }}
+      />
     </div>
   );
 }

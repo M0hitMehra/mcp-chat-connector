@@ -32,7 +32,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (getAuthToken()) {
-      navigate("/connect");
+      navigate("/chat");
     }
   }, [navigate]);
 
@@ -117,7 +117,7 @@ export default function Auth() {
         user: response.data?.data || { email: form.email.trim() },
       });
 
-      navigate("/connect");
+      navigate("/chat");
     } catch (authError) {
       console.error(authError);
 

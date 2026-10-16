@@ -8,6 +8,14 @@ export const AUTH_USER_KEY = "mcp_auth_user";
 
 export const getAuthToken = () => localStorage.getItem(AUTH_TOKEN_KEY);
 
+export const getSavedApiKey = () =>
+  sessionStorage.getItem("mcp_api_key") || localStorage.getItem("mcp_api_key") || "";
+
+export const saveThreadDefaults = ({ apiKey, modelName }) => {
+  if (apiKey) sessionStorage.setItem("mcp_api_key", apiKey);
+  if (modelName) localStorage.setItem("mcp_model", modelName);
+};
+
 export const getAuthUser = () => {
   const user = localStorage.getItem(AUTH_USER_KEY);
   if (!user) return null;
@@ -42,6 +50,8 @@ export const clearAuthSession = () => {
   localStorage.removeItem("mcp_session_id");
   localStorage.removeItem("mcp_thread_id");
   localStorage.removeItem("mcp_thread_name");
+  localStorage.removeItem("mcp_pitch_thread_id");
+  localStorage.removeItem("mcp_pitch_company");
   sessionStorage.removeItem("mcp_api_key");
 };
 
@@ -67,13 +77,6 @@ export const loginUser = (payload) => api.post("/auth/login", payload);
 
 export const checkHealth = () => api.get("/health");
 
-export const connectAgent = () => api.post("/connect");
-
-export const listSessions = () => api.get("/sessions");
-
-export const deleteSession = (sessionId) =>
-  api.delete(`/session/${sessionId}`);
-
 export const listThreads = () => api.get("/threads");
 
 export const createThread = (payload) => api.post("/threads", payload);
@@ -83,5 +86,18 @@ export const getThreadMessages = (threadId) =>
 
 export const updateThreadConfig = (threadId, payload) =>
   api.patch(`/threads/${threadId}/config`, payload);
+
+export const updatePitchThreadConfig = (threadId, payload) =>
+  api.patch(`/pitch/${threadId}/config`, payload);
+
+export const searchPitchCompanies = (payload) =>
+  api.post("/pitch/company-search", payload);
+
+export const createPitchThread = (payload) => api.post("/pitch/", payload);
+
+export const listPitchThreads = () => api.get("/pitch/");
+
+export const getPitchThreadMessages = (threadId) =>
+  api.get(`/pitch/${threadId}/messages`);
 
 export default api;
