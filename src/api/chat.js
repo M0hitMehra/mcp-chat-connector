@@ -90,8 +90,10 @@ export const updateThreadConfig = (threadId, payload) =>
 export const updatePitchThreadConfig = (threadId, payload) =>
   api.patch(`/pitch/${threadId}/config`, payload);
 
-export const searchPitchCompanies = (payload) =>
-  api.post("/pitch/company-search", payload);
+export const searchPitchCompanies = (companyName) =>
+  api.post("/pitch/company-search", null, {
+    params: { company_name: companyName },
+  });
 
 export const createPitchThread = (payload) => api.post("/pitch/", payload);
 

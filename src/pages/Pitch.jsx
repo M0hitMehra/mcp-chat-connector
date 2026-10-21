@@ -42,10 +42,13 @@ const threadLabel = (thread, names) => {
 function companyOptions(payload) {
   const result = payload?.data ?? payload?.companies ?? payload?.results ?? payload;
   const rows = Array.isArray(result) ? result : [result];
-  return rows.filter((row) => row && typeof row === "object" && (row.cin || row.CIN || row.cin_number))
+  return rows.filter((row) => row && typeof row === "object" && (row.cin || row.CIN || row.cin_number || row.id))
     .map((row) => ({
-      cin: row.cin || row.CIN || row.cin_number,
+      cin: row.cin || row.CIN || row.cin_number || row.id,
       companyName: row.companyName || row.company_name || row.name || "Company",
+      status: row.status || "",
+      type: row.type || "",
+      rocCode: row.rocCode || row.roc_code || "",
     }));
 }
 
@@ -89,12 +92,9 @@ export default function Pitch() {
         const latest = items[0];
         setThreadId(latest.thread_id);
         setThreadName(threadLabel(latest, companyNamesRef.current));
-      } else if (!getSavedApiKey()) {
-        setDefaultsOpen(true);
       }
     }).catch((loadError) => {
       setError(loadError.response?.data?.detail || "Unable to load pitch history.");
-      if (!getSavedApiKey()) setDefaultsOpen(true);
     }).finally(() => setLoadingHistory(false));
   }, [navigate]);
 
@@ -119,16 +119,14 @@ export default function Pitch() {
     setSelectedCin("");
     setError("");
     replaceMessages([]);
-    if (!apiKey.trim()) setDefaultsOpen(true);
   };
 
   const search = async (event) => {
     event.preventDefault(); setError(""); setOptions([]); setSelectedCin("");
     if (companyName.trim().length < 2) { setError("Enter at least two characters of a company name."); return; }
-    if (!apiKey.trim()) { setDefaultsOpen(true); setError("Enter an API key to search for companies."); return; }
     setBusy(true);
     try {
-      const response = await searchPitchCompanies({ companyName: companyName.trim(), apiKey: apiKey.trim() });
+      const response = await searchPitchCompanies(companyName.trim());
       const found = companyOptions(response.data);
       setOptions(found);
       if (!found.length) setError("No company CIN matches were returned. Try another company name.");
@@ -141,7 +139,7 @@ export default function Pitch() {
   const createSelectedPitch = async () => {
     const company = options.find((item) => String(item.cin) === selectedCin);
     if (!company) return;
-    if (!apiKey.trim()) { setDefaultsOpen(true); return; }
+    if (!apiKey.trim()) { setDefaultsOpen(true); setError("Enter or save an API key before creating the pitch thread."); return; }
     setBusy(true); setError("");
     try {
       saveThreadDefaults({ apiKey: apiKey.trim(), modelName: model });
@@ -219,7 +217,7 @@ export default function Pitch() {
                   <input value={companyName} onChange={(event) => setCompanyName(event.target.value)} placeholder="Company name" className="min-w-0 flex-1 rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--text)] outline-none focus:border-[var(--accent)]" />
                   <button disabled={busy} className="rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? "Searching…" : "Find companies"}</button>
                 </form>
-                {options.length > 0 && <div className="mt-5 space-y-2"><p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Select a company CIN</p>{options.map((option) => <label key={option.cin} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 ${selectedCin === String(option.cin) ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--border)]"}`}><input type="radio" name="cin" value={option.cin} checked={selectedCin === String(option.cin)} onChange={(event) => setSelectedCin(event.target.value)} /><span className="min-w-0 flex-1"><span className="block font-semibold text-[var(--text)]">{option.companyName}</span><span className="font-mono text-xs text-[var(--muted)]">CIN: {option.cin}</span></span></label>)}<button onClick={createSelectedPitch} disabled={!selectedCin || busy} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] py-3 text-sm font-semibold text-white disabled:opacity-50">Create pitch thread <ArrowRightIcon className="h-4 w-4" /></button></div>}
+                {options.length > 0 && <div className="mt-5 space-y-2"><p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Select a company</p>{options.map((option) => <label key={option.cin} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 ${selectedCin === String(option.cin) ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--border)]"}`}><input type="radio" name="cin" value={option.cin} checked={selectedCin === String(option.cin)} onChange={(event) => setSelectedCin(event.target.value)} /><span className="min-w-0 flex-1"><span className="block font-semibold text-[var(--text)]">{option.companyName}</span><span className="block font-mono text-xs text-[var(--muted)]">CIN/LLPIN: {option.cin}</span>{(option.status || option.type || option.rocCode) && <span className="mt-1 block text-[10px] text-[var(--faint)]">{[option.type, option.status, option.rocCode].filter(Boolean).join(" · ")}</span>}</span></label>)}<button onClick={createSelectedPitch} disabled={!selectedCin || busy} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] py-3 text-sm font-semibold text-white disabled:opacity-50">Create pitch thread <ArrowRightIcon className="h-4 w-4" /></button></div>}
                 <div className="mt-5 grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--panel-muted)] p-4 sm:grid-cols-[1fr_1fr_auto]">
                   <label className="text-xs font-semibold text-[var(--muted)]">API key<input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="Gemini API key" className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--text)]" /></label>
                   <label className="text-xs font-semibold text-[var(--muted)]">Model<select value={model} onChange={(event) => setModel(event.target.value)} className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--text)]">{MODELS.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
