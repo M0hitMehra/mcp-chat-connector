@@ -327,6 +327,12 @@ export default function Pitch() {
               Normal chats
             </button>
             <button
+              onClick={() => navigate("/manage")}
+              className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--text)]"
+            >
+              Manage
+            </button>
+            <button
               onClick={toggleTheme}
               className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--text)]"
             >

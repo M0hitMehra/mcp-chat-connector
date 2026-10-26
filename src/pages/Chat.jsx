@@ -5,6 +5,7 @@ import {
   ArrowPathIcon,
   Bars3Icon,
   BoltIcon,
+  BuildingOffice2Icon,
   ChatBubbleLeftRightIcon,
   CheckIcon,
   ClipboardDocumentIcon,
@@ -460,6 +461,15 @@ export default function Chat() {
         >
           <SparklesIcon className="h-4 w-4" />
           Company Pitch
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate("/manage")}
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--panel-muted)] text-xs font-semibold text-[var(--text)] transition hover:border-[var(--accent-border)] hover:text-[var(--accent)]"
+        >
+          <BuildingOffice2Icon className="h-4 w-4" />
+          Manage
         </button>
 
         {/* Command Palette Trigger */}
