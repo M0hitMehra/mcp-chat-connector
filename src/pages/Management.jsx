@@ -10,12 +10,15 @@ import {
 } from "@heroicons/react/24/outline";
 import {
   createCompany,
+  clearManagementSession,
+  getManagementToken,
   getCompanies,
   MANAGEMENT_API_URL,
+  managementLogin,
   managementSignup,
   managementSignupWithRoles,
+  setManagementSession,
 } from "../api/management";
-import { clearAuthSession, getAuthToken } from "../api/chat";
 import useTheme from "../hooks/useTheme";
 
 const initialAddress = { line1: "", line2: "", city: "", state: "", postalCode: "", country: "India" };
@@ -74,13 +77,17 @@ function AddressFields({ title, value, onChange, required = true, sourceAddress 
 export default function Management() {
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
-  const token = getAuthToken();
+  const [token, setToken] = useState(getManagementToken);
   const [tab, setTab] = useState("companies");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginError, setLoginError] = useState("");
   const [filters, setFilters] = useState({ name: "", code: "", legalName: "", email: "", phone: "", gstin: "", status: "" });
   const [companyPage, setCompanyPage] = useState({ rows: [], total: 0, pages: 1, page: 0 });
   const [page, setPage] = useState(0);
   const [companyBusy, setCompanyBusy] = useState(Boolean(token));
-  const [companyError, setCompanyError] = useState(() => token ? "" : "Sign in to your chat account to browse companies.");
+  const [companyError, setCompanyError] = useState("");
   const [companySuccess, setCompanySuccess] = useState("");
   const [company, setCompany] = useState(initialCompany);
   const [userForm, setUserForm] = useState({ username: "", password: "", firstName: "", middleName: "", lastName: "", team_id: "", designation_id: "", manager_id: "", email: "" });
@@ -100,6 +107,22 @@ export default function Management() {
     } catch (error) { setCompanyError(responseMessage(error)); }
     finally { setCompanyBusy(false); }
   }, []);
+
+  const signInToManagement = async (event) => {
+    event.preventDefault(); setLoginError(""); setLoginBusy(true);
+    try {
+      const response = await managementLogin({ email: loginEmail.trim(), password: loginPassword });
+      const tokenValue = response?.data?.token || response?.data?.data?.token;
+      if (!tokenValue) throw new Error("The management API did not return an authentication token.");
+      setManagementSession({
+        token: tokenValue,
+        user: response?.data?.user || response?.data?.data?.user || { email: loginEmail.trim() },
+      });
+      setToken(tokenValue);
+      setLoginPassword("");
+    } catch (error) { setLoginError(responseMessage(error)); }
+    finally { setLoginBusy(false); }
+  };
 
   useEffect(() => {
     if (!token) return undefined;
@@ -136,13 +159,36 @@ export default function Management() {
     finally { setUserBusy(false); }
   };
 
-  const logout = () => { clearAuthSession(); navigate("/"); };
+  const logout = () => { clearManagementSession(); setToken(""); };
   const pages = Math.max(1, Number(companyPage.pages) || 1);
   const visibleTabs = useMemo(() => [
     { id: "companies", label: "Companies", icon: BuildingOffice2Icon },
     { id: "add-company", label: "Add company", icon: PlusIcon },
     { id: "users", label: "Users", icon: UserPlusIcon },
   ], []);
+
+  if (!token) {
+    return (
+      <main className="app-surface flex h-screen items-center justify-center overflow-y-auto px-4 py-6">
+        <div className="glass-panel-strong w-full max-w-md rounded-3xl p-6 sm:p-8">
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--accent)] text-white"><ShieldCheckIcon className="h-6 w-6" /></span>
+              <div><div className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">Separate management access</div><h1 className="text-xl font-bold text-[var(--text)]">Sign in to Manage</h1></div>
+            </div>
+            <button onClick={() => navigate("/chat")} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--text)]">Back to chat</button>
+          </div>
+          <p className="mb-5 text-sm text-[var(--muted)]">Use your management account credentials. Management access has its own session, separate from chat.</p>
+          {loginError && <p role="alert" className="mb-4 rounded-xl bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">{loginError}</p>}
+          <form onSubmit={signInToManagement} className="space-y-4">
+            <Field label="Management email" type="email" autoComplete="username" required value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} />
+            <Field label="Management password" type="password" autoComplete="current-password" required value={loginPassword} onChange={(event) => setLoginPassword(event.target.value)} />
+            <button disabled={loginBusy} className="w-full rounded-xl bg-[var(--accent)] px-4 py-3 text-sm font-bold text-white disabled:opacity-60">{loginBusy ? "Signing in…" : "Sign in to management"}</button>
+          </form>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="app-surface h-screen overflow-y-auto px-4 py-5 sm:px-7">
@@ -161,7 +207,6 @@ export default function Management() {
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-xs text-[var(--muted)]">
           <span>API: <span className="font-mono text-[var(--text)]">{MANAGEMENT_API_URL}</span></span>
-          {!token && <span>Company directory is available without signing in. Sign in to your chat account to register users.</span>}
         </div>
 
         <div className="mb-4 flex flex-wrap gap-2">
@@ -193,11 +238,11 @@ export default function Management() {
         </section>}
 
         {tab === "users" && <section className="glass-panel-strong rounded-2xl p-4 sm:p-6"><h2 className="text-lg font-bold text-[var(--text)]">User registration</h2><p className="mb-4 text-xs text-[var(--muted)]">The standard signup endpoint requires team, designation, and manager IDs. Role-based signup is restricted by the API to administrators.</p>
-          {userMode === "roles" && !token ? <div className="mx-auto max-w-md rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-5 text-center"><h3 className="mb-1 font-bold text-[var(--text)]">Chat sign-in required</h3><p className="mb-4 text-xs text-[var(--muted)]">Role-based signup is an admin-only API. Sign in with your existing chat account; management requests will use that same session token.</p><button onClick={() => navigate("/")} className="rounded-xl bg-[var(--accent)] px-4 py-3 text-xs font-bold text-white">Go to sign in</button></div> : <>
+          <>
             <div className="mb-4 inline-flex rounded-xl border border-[var(--border)] p-1"><button onClick={() => setUserMode("signup")} className={`rounded-lg px-3 py-2 text-xs ${userMode === "signup" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted)]"}`}>Standard signup</button><button onClick={() => setUserMode("roles")} className={`rounded-lg px-3 py-2 text-xs ${userMode === "roles" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted)]"}`}>Signup with roles (admin)</button></div>
             {userError && <p role="alert" className="mb-3 rounded-xl bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">{userError}</p>}{userMessage && <p role="status" className="mb-3 rounded-xl bg-[var(--emerald-soft)] p-3 text-sm text-[var(--emerald)]">{userMessage}</p>}
             <form onSubmit={submitUser} className="space-y-4"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><Field label="Username *" required value={userForm.username} onChange={(e) => setUserForm({ ...userForm, username: e.target.value })} /><Field label="Email *" type="email" required value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} /><Field label="Password *" type="password" required autoComplete="new-password" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} />{userMode === "signup" && <>{[["firstName", "First name"], ["middleName", "Middle name"], ["lastName", "Last name"], ["team_id", "Team ID"], ["designation_id", "Designation ID"], ["manager_id", "Manager ID"]].map(([key, label]) => <Field key={key} label={`${label} *`} required value={userForm[key]} onChange={(e) => setUserForm({ ...userForm, [key]: e.target.value })} />)}</>}{userMode === "roles" && <Field className="sm:col-span-2" label="Roles (comma-separated, e.g. ROLE_USER) *" required value={roles} onChange={(e) => setRoles(e.target.value)} />}</div><button disabled={userBusy} className="rounded-xl bg-[var(--accent)] px-5 py-3 text-xs font-bold text-white disabled:opacity-60">{userBusy ? "Creating user…" : "Create user"}</button></form>
-          </>}
+          </>
         </section>}
         <footer className="mt-auto py-5 text-center text-[10px] text-[var(--faint)]">Management API · Company listing supports search and pagination · Forms validate before submission</footer>
       </div>
