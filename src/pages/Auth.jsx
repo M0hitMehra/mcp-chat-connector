@@ -106,7 +106,7 @@ export default function Auth() {
           ? await registerUser(payload)
           : await loginUser(payload);
 
-      const token = response.data?.token;
+      const token = response.data?.token || response.data?.data?.token;
 
       if (!token) {
         throw new Error("Backend did not return an authentication token.");
@@ -114,7 +114,10 @@ export default function Auth() {
 
       setAuthSession({
         token,
-        user: response.data?.data || { email: form.email.trim() },
+        user:
+          response.data?.user ||
+          response.data?.data?.user ||
+          { email: form.email.trim() },
       });
 
       navigate("/chat");
