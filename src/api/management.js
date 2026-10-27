@@ -40,5 +40,23 @@ export const getCompanies = (params) =>
   managementApi.get("/api/v1/companies/", { params });
 export const createCompany = (payload) =>
   managementApi.post("/api/v1/companies/", payload);
+export const getCompany = (companyCode) =>
+  managementApi.get(`/api/v1/companies/${encodeURIComponent(companyCode)}`);
+export const updateCompany = (companyCode, payload) =>
+  managementApi.put(`/api/v1/companies/${encodeURIComponent(companyCode)}`, payload);
+export const deleteCompany = (companyCode) =>
+  managementApi.delete(`/api/v1/companies/${encodeURIComponent(companyCode)}`);
+
+const resourceUrl = (path, code) =>
+  `/api/v1/${path}${code == null ? "" : `/${encodeURIComponent(code)}`}`;
+
+export const listManagementResource = (path) =>
+  managementApi.get(resourceUrl(path));
+export const createManagementResource = (path, payload) =>
+  managementApi.post(resourceUrl(path), payload);
+export const updateManagementResource = (path, code, payload) =>
+  managementApi.put(resourceUrl(path, code), payload);
+export const deleteManagementResource = (path, code) =>
+  managementApi.delete(resourceUrl(path, code));
 
 export default managementApi;
