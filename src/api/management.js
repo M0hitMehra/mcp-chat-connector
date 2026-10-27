@@ -2,7 +2,8 @@ import axios from "axios";
 import { getAuthToken } from "./chat";
 
 export const MANAGEMENT_API_URL =
-  import.meta.env.VITE_MANAGEMENT_API_URL || "/management-api";
+  import.meta.env.VITE_MANAGEMENT_API_URL ||
+  "https://spring-boot-test-production-a0d6.up.railway.app";
 const managementApi = axios.create({
   baseURL: MANAGEMENT_API_URL,
   headers: { "Content-Type": "application/json" },
