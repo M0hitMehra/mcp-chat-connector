@@ -54,6 +54,12 @@ const MANAGEMENT_RESOURCES = [
       { name: "managerCode", label: "Manager employee code", read: (row) => row.managerCode || row.manager?.employeeCode },
       { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, defaultValue: "ACTIVE" },
     ],
+    filters: [
+      { name: "code", label: "Code", value: (row) => row.code },
+      { name: "name", label: "Name", value: (row) => row.name },
+      { name: "company", label: "Company code", value: (row) => row.company?.code || row.companyCode },
+      { name: "status", label: "Status", value: (row) => row.status },
+    ],
     columns: [
       { label: "Code", value: (row) => row.code }, { label: "Name", value: (row) => row.name },
       { label: "Company", value: (row) => row.company?.code || row.companyCode }, { label: "Email", value: (row) => row.email },
@@ -69,6 +75,12 @@ const MANAGEMENT_RESOURCES = [
       { name: "description", label: "Description", type: "textarea" },
       { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, defaultValue: "ACTIVE" },
     ],
+    filters: [
+      { name: "code", label: "Code", value: (row) => row.code },
+      { name: "name", label: "Name", value: (row) => row.name },
+      { name: "branch", label: "Branch code", value: (row) => row.branch?.code || row.branchCode },
+      { name: "status", label: "Status", value: (row) => row.status },
+    ],
     columns: [
       { label: "Code", value: (row) => row.code }, { label: "Name", value: (row) => row.name },
       { label: "Branch", value: (row) => row.branch?.code || row.branchCode }, { label: "Status", value: (row) => row.status },
@@ -83,6 +95,12 @@ const MANAGEMENT_RESOURCES = [
       { name: "description", label: "Description", type: "textarea" },
       { name: "leadCode", label: "Lead employee code", read: (row) => row.leadCode || row.lead?.employeeCode },
       { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, defaultValue: "ACTIVE" },
+    ],
+    filters: [
+      { name: "code", label: "Code", value: (row) => row.code },
+      { name: "name", label: "Name", value: (row) => row.name },
+      { name: "department", label: "Department code", value: (row) => row.department?.code || row.departmentCode },
+      { name: "status", label: "Status", value: (row) => row.status },
     ],
     columns: [
       { label: "Code", value: (row) => row.code }, { label: "Name", value: (row) => row.name },
@@ -103,6 +121,12 @@ const MANAGEMENT_RESOURCES = [
       { name: "status", label: "Employment status", type: "select", options: ["ACTIVE", "ON_LEAVE", "SUSPENDED", "RESIGNED", "TERMINATED"], defaultValue: "ACTIVE", read: (row) => row.status || row.employmentStatus },
       { name: "roles", label: "Roles (comma separated)", type: "list", read: (row) => row.roles },
     ],
+    filters: [
+      { name: "employeeCode", label: "Employee code", value: (row) => row.employeeCode },
+      { name: "name", label: "Name", value: (row) => [row.firstName, row.middleName, row.lastName].filter(Boolean).join(" ") },
+      { name: "email", label: "Email", value: (row) => row.email },
+      { name: "status", label: "Status", value: (row) => row.employmentStatus || row.status },
+    ],
     columns: [
       { label: "Employee code", value: (row) => row.employeeCode },
       { label: "Name", value: (row) => [row.firstName, row.middleName, row.lastName].filter(Boolean).join(" ") },
@@ -118,6 +142,11 @@ const MANAGEMENT_RESOURCES = [
       { name: "roleName", label: "Role name", required: true }, { name: "description", label: "Description", type: "textarea" },
       { name: "isActive", label: "Active", type: "checkbox", defaultValue: true },
     ],
+    filters: [
+      { name: "roleCode", label: "Role code", value: (row) => row.roleCode },
+      { name: "roleName", label: "Role name", value: (row) => row.roleName },
+      { name: "active", label: "Active", value: (row) => row.isActive ?? row.active },
+    ],
     columns: [
       { label: "Code", value: (row) => row.roleCode }, { label: "Role", value: (row) => row.roleName },
       { label: "Description", value: (row) => row.description }, { label: "Active", value: (row) => row.isActive ?? row.active },
@@ -129,6 +158,11 @@ const MANAGEMENT_RESOURCES = [
       { name: "accessLevelCode", label: "Access level code", required: true, createOnly: true },
       { name: "accessLevel", label: "Access level name", required: true }, { name: "description", label: "Description", type: "textarea" },
       { name: "active", label: "Active", type: "checkbox", defaultValue: true },
+    ],
+    filters: [
+      { name: "code", label: "Access code", value: (row) => row.accessLevelCode },
+      { name: "name", label: "Access level", value: (row) => row.accessLevel },
+      { name: "active", label: "Active", value: (row) => row.active },
     ],
     columns: [
       { label: "Code", value: (row) => row.accessLevelCode }, { label: "Access level", value: (row) => row.accessLevel },
@@ -390,7 +424,7 @@ export default function Management() {
             <AddressFields title="Permanent address" value={company.permanentAddress} onChange={(value) => setCompany({ ...company, permanentAddress: value })} />
             <AddressFields key={`office-${companySuccess}`} title="Office address (optional)" required={false} sourceAddress={company.permanentAddress} value={company.officeAddress || initialAddress} onChange={(value) => setCompany({ ...company, officeAddress: value })} />
             <AddressFields key={`current-${companySuccess}`} title="Current address (optional)" required={false} sourceAddress={company.permanentAddress} value={company.currentAddress || initialAddress} onChange={(value) => setCompany({ ...company, currentAddress: value })} />
-            <button disabled={companyBusy} className="rounded-xl bg-[var(--accent)] px-5 py-3 text-xs font-bold text-white disabled:opacity-60">{companyBusy ? "Creating…" : "Create company"}</button>
+            <div className="flex flex-wrap gap-2"><button disabled={companyBusy} className="rounded-xl bg-[var(--accent)] px-5 py-3 text-xs font-bold text-white disabled:opacity-60">{companyBusy ? "Creating…" : "Create company"}</button><button type="button" disabled={companyBusy} onClick={() => { setCompany(initialCompany); setCompanyError(""); setTab("companies"); }} className="rounded-xl border border-[var(--border)] px-5 py-3 text-xs text-[var(--text)] disabled:opacity-50">Cancel</button></div>
           </form>
         </section>}
 
