@@ -38,20 +38,27 @@ const initialCompany = {
 const COMPANY_FIELDS = [
   ["Name", "name"], ["Code", "code"], ["Legal name", "legalName"],
   ["Email", "email"], ["Phone", "phone"], ["GSTIN", "gstin"], ["Status", "status"],
-  ["Registered city", "registeredAddressCity"], ["Registered state", "registeredAddressState"],
-  ["Registered country", "registeredAddressCountry"], ["Registered PIN", "registeredAddressPostalCode"],
 ];
+const COMPANY_ADDRESS_FILTERS = ["current", "permanent", "registered", "office"].flatMap((address) => [
+  [`${address[0].toUpperCase()}${address.slice(1)} city`, `${address}AddressCity`],
+  [`${address[0].toUpperCase()}${address.slice(1)} state`, `${address}AddressState`],
+  [`${address[0].toUpperCase()}${address.slice(1)} country`, `${address}AddressCountry`],
+  [`${address[0].toUpperCase()}${address.slice(1)} PIN`, `${address}AddressPostalCode`],
+  [`${address[0].toUpperCase()}${address.slice(1)} landmark`, `${address}AddressLandmark`],
+]);
+const INITIAL_COMPANY_FILTERS = Object.fromEntries([
+  ...[...COMPANY_FIELDS, ["From date", "from"], ["To date", "to"], ...COMPANY_ADDRESS_FILTERS].map(([, key]) => [key, ""]),
+]);
 const STATUS_OPTIONS = ["ACTIVE", "INACTIVE"];
 const MANAGEMENT_RESOURCES = [
   {
     id: "branches", label: "Branches", singular: "Branch", plural: "Branches", path: "branches", getKey: (row) => row.code,
     fields: [
-      { name: "code", label: "Branch code", required: true, createOnly: true },
       { name: "name", label: "Branch name", required: true },
       { name: "companyCode", label: "Company code", required: true, read: (row) => row.companyCode || row.company?.code },
       { name: "email", label: "Email", type: "email", maxLength: 150 },
       { name: "phone", label: "Phone", type: "tel", pattern: "[+]?[0-9]{7,15}", title: "Enter 7 to 15 digits, optionally starting with +" },
-      { name: "managerCode", label: "Manager employee code", read: (row) => row.managerCode || row.manager?.employeeCode },
+      { name: "managerCode", label: "Manager employee code", required: true, read: (row) => row.managerCode || row.manager?.employeeCode },
       { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, defaultValue: "ACTIVE" },
     ],
     filters: [
@@ -69,7 +76,6 @@ const MANAGEMENT_RESOURCES = [
   {
     id: "departments", label: "Departments", singular: "Department", plural: "Departments", path: "departments", getKey: (row) => row.code,
     fields: [
-      { name: "code", label: "Department code", required: true, createOnly: true },
       { name: "name", label: "Department name", required: true },
       { name: "branchCode", label: "Branch code", required: true, read: (row) => row.branchCode || row.branch?.code },
       { name: "description", label: "Description", type: "textarea" },
@@ -89,11 +95,10 @@ const MANAGEMENT_RESOURCES = [
   {
     id: "teams", label: "Teams", singular: "Team", plural: "Teams", path: "teams", getKey: (row) => row.code,
     fields: [
-      { name: "code", label: "Team code", required: true, createOnly: true },
       { name: "name", label: "Team name", required: true },
       { name: "departmentCode", label: "Department code", required: true, read: (row) => row.departmentCode || row.department?.code },
       { name: "description", label: "Description", type: "textarea" },
-      { name: "leadCode", label: "Lead employee code", read: (row) => row.leadCode || row.lead?.employeeCode },
+      { name: "leadCode", label: "Lead employee code", required: true, read: (row) => row.leadCode || row.lead?.employeeCode },
       { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, defaultValue: "ACTIVE" },
     ],
     filters: [
@@ -111,12 +116,11 @@ const MANAGEMENT_RESOURCES = [
   {
     id: "employees", label: "Employees", singular: "Employee", plural: "Employees", path: "employees", getKey: (row) => row.employeeCode,
     fields: [
-      { name: "employeeCode", label: "Employee code", required: true, createOnly: true },
       { name: "firstName", label: "First name", required: true }, { name: "middleName", label: "Middle name" },
       { name: "lastName", label: "Last name", required: true }, { name: "email", label: "Email", type: "email", required: true },
       { name: "phone", label: "Phone", type: "tel", pattern: "[+]?[0-9]{7,15}", title: "Enter 7 to 15 digits, optionally starting with +" },
-      { name: "teamCode", label: "Team code", read: (row) => row.teamCode || row.team_id },
-      { name: "designation", label: "Designation" }, { name: "managerCode", label: "Manager employee code", read: (row) => row.managerCode || row.manager_id },
+      { name: "teamCode", label: "Team code", required: true, read: (row) => row.teamCode || row.team_id },
+      { name: "designation", label: "Designation", required: true }, { name: "managerCode", label: "Manager employee code", required: true, read: (row) => row.managerCode || row.manager_id },
       { name: "password", label: "Initial password (optional)", type: "password", createOnly: true },
       { name: "status", label: "Employment status", type: "select", options: ["ACTIVE", "ON_LEAVE", "SUSPENDED", "RESIGNED", "TERMINATED"], defaultValue: "ACTIVE", read: (row) => row.status || row.employmentStatus },
       { name: "roles", label: "Roles (comma separated)", type: "list", read: (row) => row.roles },
@@ -138,7 +142,6 @@ const MANAGEMENT_RESOURCES = [
   {
     id: "roles", label: "Roles", singular: "Role", plural: "Roles", path: "roles", getKey: (row) => row.roleCode,
     fields: [
-      { name: "roleCode", label: "Role code", required: true, createOnly: true },
       { name: "roleName", label: "Role name", required: true }, { name: "description", label: "Description", type: "textarea" },
       { name: "isActive", label: "Active", type: "checkbox", defaultValue: true },
     ],
@@ -155,7 +158,6 @@ const MANAGEMENT_RESOURCES = [
   {
     id: "access-levels", label: "Access levels", singular: "Access level", plural: "Access levels", path: "access-levels", getKey: (row) => row.accessLevelCode,
     fields: [
-      { name: "accessLevelCode", label: "Access level code", required: true, createOnly: true },
       { name: "accessLevel", label: "Access level name", required: true }, { name: "description", label: "Description", type: "textarea" },
       { name: "active", label: "Active", type: "checkbox", defaultValue: true },
     ],
@@ -167,6 +169,26 @@ const MANAGEMENT_RESOURCES = [
     columns: [
       { label: "Code", value: (row) => row.accessLevelCode }, { label: "Access level", value: (row) => row.accessLevel },
       { label: "Description", value: (row) => row.description }, { label: "Active", value: (row) => row.active },
+    ],
+  },
+  {
+    id: "designations", label: "Designations", singular: "Designation", plural: "Designations", path: "designations", getKey: (row) => row.code,
+    fields: [
+      { name: "name", label: "Designation name", required: true, maxLength: 150 },
+      { name: "level", label: "Level", type: "number", min: 0 },
+      { name: "description", label: "Description", type: "textarea" },
+      { name: "status", label: "Status", type: "select", options: STATUS_OPTIONS, defaultValue: "ACTIVE" },
+    ],
+    filters: [
+      { name: "code", label: "Code", value: (row) => row.code },
+      { name: "name", label: "Name", value: (row) => row.name },
+      { name: "level", label: "Level", value: (row) => row.level },
+      { name: "status", label: "Status", value: (row) => row.status },
+    ],
+    columns: [
+      { label: "Code", value: (row) => row.code }, { label: "Name", value: (row) => row.name },
+      { label: "Level", value: (row) => row.level }, { label: "Description", value: (row) => row.description },
+      { label: "Status", value: (row) => row.status },
     ],
   },
 ];
@@ -221,7 +243,7 @@ export default function Management() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginBusy, setLoginBusy] = useState(false);
   const [loginError, setLoginError] = useState("");
-  const [filters, setFilters] = useState({ name: "", code: "", legalName: "", email: "", phone: "", gstin: "", status: "" });
+  const [filters, setFilters] = useState(INITIAL_COMPANY_FILTERS);
   const [companyPage, setCompanyPage] = useState({ rows: [], total: 0, pages: 1, page: 0 });
   const [page, setPage] = useState(0);
   const [companyBusy, setCompanyBusy] = useState(Boolean(token));
@@ -352,6 +374,7 @@ export default function Management() {
         employees: UserGroupIcon,
         roles: KeyIcon,
         "access-levels": AdjustmentsHorizontalIcon,
+        designations: BriefcaseIcon,
       }[resource.id],
     })),
     { id: "users", label: "Users", icon: UserPlusIcon },
@@ -406,8 +429,9 @@ export default function Management() {
         {tab === "companies" && <section className="glass-panel-strong rounded-2xl p-4 sm:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold text-[var(--text)]">Company directory</h2><p className="text-xs text-[var(--muted)]">{companyPage.total} matching companies</p></div><button onClick={() => loadCompanies(page, filters)} disabled={companyBusy} className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--text)] disabled:opacity-60"><ArrowPathIcon className={`h-4 w-4 ${companyBusy ? "animate-spin" : ""}`} />Refresh</button></div>
           <form className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" onSubmit={(event) => { event.preventDefault(); loadCompanies(0, filters); }}>
-            {COMPANY_FIELDS.map(([label, key]) => key === "status" ? <label key={key} className="text-xs font-semibold text-[var(--muted)]">Status<select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })} className="mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm text-[var(--text)]"><option value="">Any status</option><option>ACTIVE</option><option>INACTIVE</option></select></label> : <Field key={key} label={label} value={filters[key]} onChange={(event) => setFilters({ ...filters, [key]: event.target.value })} />)}
-            <div className="flex items-end gap-2"><button className="h-[42px] rounded-xl bg-[var(--accent)] px-4 text-xs font-bold text-white">Search</button><button type="button" onClick={() => { const reset = { name: "", code: "", legalName: "", email: "", phone: "", gstin: "", status: "" }; setFilters(reset); loadCompanies(0, reset); }} className="h-[42px] rounded-xl border border-[var(--border)] px-4 text-xs text-[var(--text)]">Clear</button></div>
+            {COMPANY_FIELDS.map(([label, key]) => key === "status" ? <label key={key} className="text-xs font-semibold text-[var(--muted)]">Status<select value={filters.status} onChange={(event) => setFilters({ ...filters, [key]: event.target.value })} className="mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2.5 text-sm text-[var(--text)]"><option value="">Any status</option><option>ACTIVE</option><option>INACTIVE</option></select></label> : <Field key={key} label={label} value={filters[key]} onChange={(event) => setFilters({ ...filters, [key]: event.target.value })} />)}
+            <div className="flex items-end gap-2"><button className="h-[42px] rounded-xl bg-[var(--accent)] px-4 text-xs font-bold text-white">Search</button><button type="button" onClick={() => { setFilters(INITIAL_COMPANY_FILTERS); loadCompanies(0, INITIAL_COMPANY_FILTERS); }} className="h-[42px] rounded-xl border border-[var(--border)] px-4 text-xs text-[var(--text)]">Clear</button></div>
+            <details className="sm:col-span-2 lg:col-span-4"><summary className="mb-3 cursor-pointer text-xs font-semibold text-[var(--accent)]">Date and address filters</summary><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Field label="Created from" type="date" value={filters.from} onChange={(event) => setFilters({ ...filters, from: event.target.value })} /><Field label="Created to" type="date" value={filters.to} onChange={(event) => setFilters({ ...filters, to: event.target.value })} />{COMPANY_ADDRESS_FILTERS.map(([label, key]) => <Field key={key} label={label} value={filters[key]} onChange={(event) => setFilters({ ...filters, [key]: event.target.value })} />)}</div></details>
           </form>
           {companyError && <p role="alert" className="mb-3 rounded-xl bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">{companyError}</p>}
           {companySuccess && <p role="status" className="mb-3 rounded-xl bg-[var(--emerald-soft)] p-3 text-sm text-[var(--emerald)]">{companySuccess}</p>}
