@@ -1,30 +1,32 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
+
 :root {
   color-scheme: light;
-  --app-bg: #f1f5f9;
+  --app-bg: #f8fafc;
   --app-bg-gradient: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
                       radial-gradient(at 100% 0%, rgba(14, 165, 233, 0.08) 0px, transparent 50%),
                       radial-gradient(at 50% 100%, rgba(168, 85, 247, 0.06) 0px, transparent 50%);
-  --glass-bg: rgba(255, 255, 255, 0.94);
+  --glass-bg: rgba(255, 255, 255, 0.96);
   --glass-bg-hover: #ffffff;
-  --glass-card: rgba(255, 255, 255, 0.96);
+  --glass-card: #ffffff;
   --glass-border: #cbd5e1;
   --glass-border-subtle: #e2e8f0;
   --glass-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
   --glass-shadow-lg: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
   
-  --panel: rgba(255, 255, 255, 0.96);
+  --panel: #ffffff;
   --panel-strong: #ffffff;
-  --panel-muted: #f8fafc;
+  --panel-muted: #f1f5f9;
   --border: #cbd5e1;
   --border-strong: #94a3b8;
 
   --text: #0f172a;
-  --text-muted: #334155;
-  --text-faint: #64748b;
-  --muted: #334155;
-  --faint: #64748b;
+  --text-muted: #1e293b;
+  --text-faint: #475569;
+  --muted: #1e293b;
+  --faint: #475569;
   
   --primary: #4f46e5;
   --primary-hover: #4338ca;
@@ -47,7 +49,8 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+.dark {
   color-scheme: dark;
   --app-bg: #07090e;
   --app-bg-gradient: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 55%),
@@ -55,7 +58,7 @@
                       radial-gradient(at 50% 100%, rgba(168, 85, 247, 0.1) 0px, transparent 55%);
   --glass-bg: rgba(15, 23, 42, 0.75);
   --glass-bg-hover: rgba(24, 34, 58, 0.9);
-  --glass-card: rgba(15, 23, 42, 0.8);
+  --glass-card: rgba(15, 23, 42, 0.85);
   --glass-border: rgba(255, 255, 255, 0.12);
   --glass-border-subtle: rgba(255, 255, 255, 0.06);
   --glass-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 20px 25px -5px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.12);
@@ -85,7 +88,7 @@
   --emerald: #10b981;
   --emerald-soft: rgba(16, 185, 129, 0.18);
   --amber: #fbbf24;
-  --amber-soft: rgba(217, 119, 6, 0.15);
+  --amber-soft: rgba(251, 191, 36, 0.15);
   --danger: #f87171;
   --danger-soft: rgba(248, 113, 113, 0.18);
 }
@@ -133,6 +136,7 @@ code, pre, .font-mono {
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
+  color: var(--text);
 }
 
 .glass-card {
@@ -143,6 +147,7 @@ code, pre, .font-mono {
   box-shadow: var(--glass-shadow);
   border-radius: 1.25rem;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--text);
 }
 
 .glass-card-hover:hover {
@@ -153,12 +158,13 @@ code, pre, .font-mono {
 }
 
 .glass-subtle {
-  background: rgba(248, 250, 252, 0.95);
+  background: rgba(241, 245, 249, 0.95);
   border: 1px solid #cbd5e1;
   color: var(--text);
 }
 
-:root[data-theme="dark"] .glass-subtle {
+:root[data-theme="dark"] .glass-subtle,
+.dark .glass-subtle {
   background: rgba(15, 23, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text);
@@ -175,13 +181,15 @@ code, pre, .font-mono {
   color: #64748b;
 }
 
-:root[data-theme="dark"] .glass-input {
+:root[data-theme="dark"] .glass-input,
+.dark .glass-input {
   background: rgba(15, 23, 42, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #f8fafc;
 }
 
-:root[data-theme="dark"] .glass-input::placeholder {
+:root[data-theme="dark"] .glass-input::placeholder,
+.dark .glass-input::placeholder {
   color: #94a3b8;
 }
 
@@ -192,7 +200,8 @@ code, pre, .font-mono {
   background: #ffffff;
 }
 
-:root[data-theme="dark"] .glass-input:focus {
+:root[data-theme="dark"] .glass-input:focus,
+.dark .glass-input:focus {
   background: rgba(15, 23, 42, 0.85);
 }
 
@@ -203,7 +212,8 @@ code, pre, .font-mono {
   color: var(--text);
 }
 
-:root[data-theme="dark"] .glass-pill {
+:root[data-theme="dark"] .glass-pill,
+.dark .glass-pill {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.12);
   color: var(--text);

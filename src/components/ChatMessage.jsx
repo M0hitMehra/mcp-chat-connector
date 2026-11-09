@@ -55,13 +55,13 @@ export default function ChatMessage({
         className={`min-w-0 max-w-[94%] rounded-2xl px-4 py-3.5 sm:max-w-[85%] shadow-sm transition-all ${
           isUser
             ? "bg-indigo-600 text-white shadow-indigo-600/15"
-            : "border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/80 text-slate-900 dark:text-slate-100 backdrop-blur-md"
+            : "border border-slate-300 dark:border-white/10 bg-white dark:bg-slate-900/80 text-slate-950 dark:text-slate-100 backdrop-blur-md"
         }`}
       >
         {/* Header Metadata */}
         <div
           className={`mb-2 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-wider ${
-            isUser ? "text-white/80" : "text-slate-500 dark:text-slate-400"
+            isUser ? "text-white/80" : "text-slate-700 dark:text-slate-400"
           }`}
         >
           <span>{isUser ? "You" : "MCP Assistant"}</span>
@@ -81,7 +81,7 @@ export default function ChatMessage({
             {message.content}
           </div>
         ) : (
-          <div className="markdown-content text-xs leading-relaxed sm:text-sm text-slate-800 dark:text-slate-100">
+          <div className="markdown-content text-xs leading-relaxed sm:text-sm text-slate-950 dark:text-slate-100">
             {message.content ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -109,7 +109,7 @@ export default function ChatMessage({
                   },
                   p({ children }) {
                     return (
-                      <p className="my-1.5 text-slate-800 dark:text-slate-200 leading-relaxed">
+                      <p className="my-1.5 text-slate-900 dark:text-slate-200 leading-relaxed font-normal">
                         {children}
                       </p>
                     );
@@ -123,14 +123,14 @@ export default function ChatMessage({
                   },
                   ul({ children }) {
                     return (
-                      <ul className="my-2 list-disc pl-5 space-y-1 text-slate-800 dark:text-slate-200">
+                      <ul className="my-2 list-disc pl-5 space-y-1 text-slate-900 dark:text-slate-200">
                         {children}
                       </ul>
                     );
                   },
                   ol({ children }) {
                     return (
-                      <ol className="my-2 list-decimal pl-5 space-y-1 text-slate-800 dark:text-slate-200">
+                      <ol className="my-2 list-decimal pl-5 space-y-1 text-slate-900 dark:text-slate-200">
                         {children}
                       </ol>
                     );

@@ -420,7 +420,7 @@ export default function ManagementResource({ resource }) {
       <div className="rounded-2xl glass-card border border-slate-300 dark:border-white/10 overflow-hidden shadow-sm">
         <div className="overflow-x-auto scroll-area">
           <table className="w-full min-w-[650px] text-left text-xs border-collapse">
-            <thead className="bg-slate-100 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400">
+            <thead className="bg-slate-100/90 dark:bg-white/5 border-b border-slate-300 dark:border-white/10 text-slate-800 dark:text-slate-300 font-bold">
               <tr>
                 {columns.map((column) => (
                   <th key={column.label} className="px-4 py-3 font-bold">
@@ -433,7 +433,7 @@ export default function ManagementResource({ resource }) {
             <tbody className="divide-y divide-slate-200 dark:divide-white/5">
               {loading ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="py-12 text-center text-slate-500">
+                  <td colSpan={columns.length + 1} className="py-12 text-center text-slate-600 dark:text-slate-400">
                     <span className="inline-flex items-center gap-2 font-medium">
                       <span className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
                       <span>Loading {resource.plural}...</span>
@@ -442,7 +442,7 @@ export default function ManagementResource({ resource }) {
                 </tr>
               ) : visibleRows.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="py-12 text-center text-slate-500 font-medium">
+                  <td colSpan={columns.length + 1} className="py-12 text-center text-slate-600 dark:text-slate-400 font-medium">
                     No matching {resource.plural.toLowerCase()} found.
                   </td>
                 </tr>
@@ -455,7 +455,7 @@ export default function ManagementResource({ resource }) {
                       className="hover:bg-slate-100/70 dark:hover:bg-slate-800/30 transition-colors"
                     >
                       {columns.map((column) => (
-                        <td key={column.label} className="px-4 py-3 text-slate-900 dark:text-slate-200 font-medium">
+                        <td key={column.label} className="px-4 py-3 text-slate-950 dark:text-slate-100 font-semibold">
                           {display(column.value(row))}
                         </td>
                       ))}
@@ -464,7 +464,7 @@ export default function ManagementResource({ resource }) {
                           <button
                             type="button"
                             onClick={() => startEdit(row)}
-                            className="p-1.5 rounded-lg glass-subtle hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-slate-700 dark:text-slate-300"
+                            className="p-1.5 rounded-lg glass-subtle hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-slate-800 dark:text-slate-300"
                             title="Edit"
                           >
                             <PencilSquareIcon className="w-4 h-4" />

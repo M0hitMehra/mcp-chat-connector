@@ -103,7 +103,7 @@ export default function Navbar() {
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
                     active
                       ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25 scale-[1.02]"
-                      : "text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/40"
+                      : "text-slate-800 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800/40"
                   }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />

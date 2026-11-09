@@ -591,7 +591,7 @@ export default function Management() {
                     className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                       active
                         ? "bg-purple-600 text-white shadow-md shadow-purple-600/30 scale-[1.02]"
-                        : "text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/40"
+                        : "text-slate-800 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800/40"
                     }`}
                   >
                     {res.label}

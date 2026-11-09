@@ -332,13 +332,13 @@ export default function Pitch() {
                     className={`w-full p-2.5 rounded-xl text-left transition-all text-xs font-medium ${
                       active
                         ? "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-500/30 shadow-sm"
-                        : "text-slate-700 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800/40"
+                        : "text-slate-800 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800/40"
                     }`}
                   >
-                    <div className="truncate font-semibold">
+                    <div className="truncate font-bold text-slate-900 dark:text-white">
                       {threadLabel(item, companyNames)}
                     </div>
-                    <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    <div className="text-[10px] font-mono text-slate-600 dark:text-slate-400 truncate mt-0.5">
                       {item.thread_id.slice(0, 16)}...
                     </div>
                   </button>

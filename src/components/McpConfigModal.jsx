@@ -131,7 +131,7 @@ export default function McpConfigModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-slate-900 dark:text-slate-200 mb-1">
                   Chat Name
                 </label>
                 <input
@@ -144,13 +144,13 @@ export default function McpConfigModal({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-slate-900 dark:text-slate-200 mb-1">
                   Gemini Model
                 </label>
                 <select
                   value={draftModel}
                   onChange={(e) => setDraftModel(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs"
+                  className="w-full px-3.5 py-2.5 rounded-xl glass-input text-xs font-medium"
                 >
                   {MODEL_OPTIONS.map((opt) => (
                     <option key={opt.id} value={opt.id}>
@@ -162,7 +162,7 @@ export default function McpConfigModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-bold text-slate-900 dark:text-slate-200 mb-1">
                 Gemini API Key
               </label>
               <div className="relative">
@@ -250,7 +250,7 @@ export default function McpConfigModal({
                 {mcpServers.map((server, index) => (
                   <div
                     key={index}
-                    className="p-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/60 space-y-2.5 animate-rise"
+                    className="p-3.5 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-slate-900/60 shadow-sm space-y-2.5 animate-rise"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
@@ -268,7 +268,7 @@ export default function McpConfigModal({
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                       <div>
-                        <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-300 mb-1">
                           Server Name *
                         </label>
                         <input
@@ -284,7 +284,7 @@ export default function McpConfigModal({
                       </div>
 
                       <div className="sm:col-span-2">
-                        <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-300 mb-1">
                           Server Endpoint URL *
                         </label>
                         <input
@@ -302,7 +302,7 @@ export default function McpConfigModal({
 
                     {/* Manual Token / Auth Key Field */}
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-300 mb-1">
                         Manual Authorization Token / API Key (optional)
                       </label>
                       <input
