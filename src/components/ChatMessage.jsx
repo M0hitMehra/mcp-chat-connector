@@ -37,10 +37,10 @@ export default function ChatMessage({
     >
       {/* Role Avatar */}
       <div
-        className={`mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] ${
+        className={`mt-1 flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl border ${
           isUser
-            ? "bg-[var(--accent)] text-[var(--app-bg)] shadow-md"
-            : "bg-[var(--panel-strong)] text-[var(--accent)] shadow-sm"
+            ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20"
+            : "bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-slate-200 dark:border-white/10 shadow-sm"
         }`}
       >
         {isUser ? (
@@ -52,16 +52,16 @@ export default function ChatMessage({
 
       {/* Message Bubble Card */}
       <div
-        className={`min-w-0 max-w-[94%] rounded-2xl px-4 py-3.5 sm:max-w-[85%] shadow-sm ${
+        className={`min-w-0 max-w-[94%] rounded-2xl px-4 py-3.5 sm:max-w-[85%] shadow-sm transition-all ${
           isUser
-            ? "bg-[var(--accent)] text-[var(--app-bg)]"
-            : "border border-[var(--border)] bg-[var(--panel-strong)] text-[var(--text)]"
+            ? "bg-indigo-600 text-white shadow-indigo-600/15"
+            : "border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/80 text-slate-900 dark:text-slate-100 backdrop-blur-md"
         }`}
       >
         {/* Header Metadata */}
         <div
           className={`mb-2 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-wider ${
-            isUser ? "text-[var(--app-bg)]/80" : "text-[var(--faint)]"
+            isUser ? "text-white/80" : "text-slate-500 dark:text-slate-400"
           }`}
         >
           <span>{isUser ? "You" : "MCP Assistant"}</span>
@@ -77,191 +77,165 @@ export default function ChatMessage({
 
         {/* Content Body */}
         {isUser ? (
-          <div className="whitespace-pre-wrap break-words text-xs leading-relaxed sm:text-sm">
+          <div className="whitespace-pre-wrap break-words text-xs leading-relaxed sm:text-sm font-medium">
             {message.content}
           </div>
         ) : (
-          <div className="markdown-content text-xs leading-relaxed sm:text-sm">
+          <div className="markdown-content text-xs leading-relaxed sm:text-sm text-slate-800 dark:text-slate-100">
             {message.content ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
                   h1({ children }) {
                     return (
-                      <h1 className="mb-2 mt-3 text-xl font-bold tracking-tight text-[var(--text)]">
+                      <h1 className="mb-2 mt-3 text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                         {children}
                       </h1>
                     );
                   },
                   h2({ children }) {
                     return (
-                      <h2 className="mb-2 mt-3 text-lg font-bold tracking-tight text-[var(--text)]">
+                      <h2 className="mb-2 mt-3 text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white">
                         {children}
                       </h2>
                     );
                   },
                   h3({ children }) {
                     return (
-                      <h3 className="mb-1.5 mt-2.5 text-sm font-bold text-[var(--text)]">
+                      <h3 className="mb-1.5 mt-2.5 text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                         {children}
                       </h3>
                     );
                   },
                   p({ children }) {
-                    return <p className="text-[var(--text)]">{children}</p>;
+                    return (
+                      <p className="my-1.5 text-slate-800 dark:text-slate-200 leading-relaxed">
+                        {children}
+                      </p>
+                    );
                   },
                   strong({ children }) {
                     return (
-                      <strong className="font-semibold text-[var(--text)]">
+                      <strong className="font-bold text-slate-950 dark:text-white">
                         {children}
                       </strong>
                     );
                   },
                   ul({ children }) {
                     return (
-                      <ul className="my-2 list-disc space-y-1 pl-5">
+                      <ul className="my-2 list-disc pl-5 space-y-1 text-slate-800 dark:text-slate-200">
                         {children}
                       </ul>
                     );
                   },
                   ol({ children }) {
                     return (
-                      <ol className="my-2 list-decimal space-y-1 pl-5">
+                      <ol className="my-2 list-decimal pl-5 space-y-1 text-slate-800 dark:text-slate-200">
                         {children}
                       </ol>
                     );
                   },
                   li({ children }) {
-                    return <li className="text-[var(--text)]">{children}</li>;
+                    return <li className="pl-0.5">{children}</li>;
                   },
                   blockquote({ children }) {
                     return (
-                      <blockquote className="my-3 border-l-2 border-[var(--accent)] pl-3 text-[var(--muted)] italic">
+                      <blockquote className="my-2 border-l-2 border-indigo-500 pl-3 italic text-slate-600 dark:text-slate-400">
                         {children}
                       </blockquote>
                     );
                   },
-                  a({ href, children }) {
-                    return (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-[var(--accent)] underline underline-offset-4"
-                      >
-                        {children}
-                      </a>
-                    );
-                  },
-                  code({ inline, children, ...props }) {
-                    if (inline) {
+                  code({ inline, className, children, ...props }) {
+                    const match = /language-(\w+)/.exec(className || "");
+                    const codeText = String(children).replace(/\n$/, "");
+
+                    if (!inline && match) {
+                      const snippetId = `code_${Math.random().toString(36).substring(2, 9)}`;
+                      const isSnippetCopied = copiedCodeId === snippetId;
+
                       return (
-                        <code
-                          className="rounded-md border border-[var(--border)] bg-[var(--panel-muted)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text)]"
-                          {...props}
-                        >
-                          {children}
-                        </code>
+                        <div className="my-3 overflow-hidden rounded-xl border border-slate-700 bg-slate-950 text-slate-100 shadow-md">
+                          <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/90 px-3.5 py-1.5 text-[11px] font-mono text-slate-400">
+                            <span>{match[1]}</span>
+                            <button
+                              type="button"
+                              onClick={() => copyCodeSnippet(codeText, snippetId)}
+                              className="flex items-center gap-1 hover:text-white transition-colors"
+                            >
+                              {isSnippetCopied ? (
+                                <>
+                                  <CheckIcon className="h-3.5 w-3.5 text-emerald-400" />
+                                  <span className="text-emerald-400">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <pre className="scroll-area overflow-x-auto p-3 text-xs leading-relaxed font-mono">
+                            <code>{children}</code>
+                          </pre>
+                        </div>
                       );
                     }
 
-                    const codeString = String(children).replace(/\n$/, "");
-                    const snippetId = String(Math.random());
-
                     return (
-                      <div className="relative my-3 overflow-hidden rounded-xl border border-[var(--border-strong)] bg-[#0d1117] text-slate-100">
-                        <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-3 py-1.5 font-mono text-[10px] text-slate-400">
-                          <span>Code Snippet</span>
-                          <button
-                            type="button"
-                            onClick={() => copyCodeSnippet(codeString, snippetId)}
-                            className="flex items-center gap-1 text-[10px] text-slate-300 hover:text-white"
-                          >
-                            {copiedCodeId === snippetId ? (
-                              <CheckIcon className="h-3 w-3 text-emerald-400" />
-                            ) : (
-                              <ClipboardDocumentIcon className="h-3 w-3" />
-                            )}
-                            <span>{copiedCodeId === snippetId ? "Copied" : "Copy"}</span>
-                          </button>
-                        </div>
-                        <pre className="overflow-x-auto p-3 font-mono text-xs leading-relaxed text-slate-200">
-                          <code>{codeString}</code>
-                        </pre>
-                      </div>
-                    );
-                  },
-                  table({ children }) {
-                    return (
-                      <div className="my-3 overflow-x-auto rounded-xl border border-[var(--border)]">
-                        <table className="w-full border-collapse text-left text-xs">
-                          {children}
-                        </table>
-                      </div>
-                    );
-                  },
-                  th({ children }) {
-                    return (
-                      <th className="border-b border-[var(--border)] bg-[var(--panel-muted)] px-3 py-2 font-semibold">
+                      <code
+                        className="rounded px-1.5 py-0.5 font-mono text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-700"
+                        {...props}
+                      >
                         {children}
-                      </th>
+                      </code>
                     );
-                  },
-                  td({ children }) {
-                    return (
-                      <td className="border-b border-[var(--border)] px-3 py-2">
-                        {children}
-                      </td>
-                    );
-                  },
-                  hr() {
-                    return <hr className="my-4 border-[var(--border)]" />;
                   },
                 }}
               >
                 {message.content}
               </ReactMarkdown>
-            ) : (
-              <div className="flex items-center gap-1.5 py-2">
-                <span className="streaming-dot h-2 w-2 rounded-full bg-[var(--accent)]" />
-                <span className="streaming-dot h-2 w-2 rounded-full bg-[var(--accent)] [animation-delay:150ms]" />
-                <span className="streaming-dot h-2 w-2 rounded-full bg-[var(--accent)] [animation-delay:300ms]" />
-              </div>
-            )}
+            ) : isStreaming ? (
+              <span className="inline-flex items-center gap-1.5 text-slate-400 italic">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                <span>Generating response...</span>
+              </span>
+            ) : null}
+          </div>
+        )}
 
-            {/* Actions Bar */}
-            {!isStreaming && message.content && (
-              <div className="mt-3 flex items-center gap-2 border-t border-[var(--border)] pt-2">
-                <button
-                  type="button"
-                  onClick={copyMessage}
-                  title="Copy response text"
-                  className="flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] font-medium text-[var(--muted)] hover:bg-[var(--panel-muted)] hover:text-[var(--text)] transition"
-                >
-                  {copied ? (
-                    <CheckIcon className="h-3.5 w-3.5 text-[var(--emerald)]" />
-                  ) : (
-                    <ClipboardDocumentIcon className="h-3.5 w-3.5" />
-                  )}
-                  <span>{copied ? "Copied" : "Copy"}</span>
-                </button>
+        {/* Message Actions */}
+        {!isUser && message.content && (
+          <div className="mt-3 flex items-center gap-2 border-t border-slate-100 dark:border-white/5 pt-2 text-slate-500 dark:text-slate-400">
+            <button
+              type="button"
+              onClick={copyMessage}
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              {copied ? (
+                <>
+                  <CheckIcon className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="text-emerald-500 font-semibold">Copied</span>
+                </>
+              ) : (
+                <>
+                  <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
 
-                {onSpeak && (
-                  <button
-                    type="button"
-                    onClick={onSpeak}
-                    title="Text-to-speech audio reader"
-                    className={`flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] font-medium transition ${
-                      isSpeaking
-                        ? "bg-[var(--accent-soft)] text-[var(--accent)] font-semibold animate-pulse"
-                        : "text-[var(--muted)] hover:bg-[var(--panel-muted)] hover:text-[var(--text)]"
-                    }`}
-                  >
-                    <SpeakerWaveIcon className="h-3.5 w-3.5" />
-                    <span>{isSpeaking ? "Speaking..." : "Read Aloud"}</span>
-                  </button>
-                )}
-              </div>
+            {onSpeak && (
+              <button
+                type="button"
+                onClick={() => onSpeak(message)}
+                className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
+                  isSpeaking ? "text-indigo-600 dark:text-indigo-400 font-bold" : ""
+                }`}
+              >
+                <SpeakerWaveIcon className="h-3.5 w-3.5" />
+                <span>{isSpeaking ? "Speaking..." : "Read Aloud"}</span>
+              </button>
             )}
           </div>
         )}

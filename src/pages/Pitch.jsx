@@ -291,13 +291,13 @@ export default function Pitch() {
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <div className="flex items-center justify-between pb-3 border-b border-white/10 lg:hidden">
-            <span className="text-xs font-bold text-slate-800 dark:text-white">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10 lg:hidden">
+            <span className="text-xs font-bold text-slate-900 dark:text-white">
               Pitch History
             </span>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             >
               <XMarkIcon className="w-5 h-5" />
             </button>
@@ -312,7 +312,7 @@ export default function Pitch() {
           </button>
 
           <div className="flex items-center justify-between px-1 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Saved Pitches ({pitchThreads.length})
             </span>
           </div>
@@ -331,14 +331,14 @@ export default function Pitch() {
                     onClick={() => selectPitch(item)}
                     className={`w-full p-2.5 rounded-xl text-left transition-all text-xs font-medium ${
                       active
-                        ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 shadow-sm"
-                        : "text-slate-600 dark:text-slate-300 hover:bg-white/30 dark:hover:bg-slate-800/40"
+                        ? "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-500/30 shadow-sm"
+                        : "text-slate-700 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800/40"
                     }`}
                   >
                     <div className="truncate font-semibold">
                       {threadLabel(item, companyNames)}
                     </div>
-                    <div className="text-[10px] font-mono text-slate-400 truncate mt-0.5">
+                    <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">
                       {item.thread_id.slice(0, 16)}...
                     </div>
                   </button>
@@ -351,22 +351,22 @@ export default function Pitch() {
         {/* Main Work Area */}
         <section className="flex-1 flex flex-col min-w-0 glass-card overflow-hidden">
           {/* Header */}
-          <div className="p-3.5 sm:p-4 border-b border-white/10 flex items-center justify-between gap-3 shrink-0">
+          <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-1.5 rounded-xl glass-subtle lg:hidden text-slate-600 dark:text-slate-300"
+                className="p-1.5 rounded-xl glass-subtle lg:hidden text-slate-700 dark:text-slate-300"
               >
                 <Bars3Icon className="w-5 h-5" />
               </button>
-              <div className="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-500/20 shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 flex items-center justify-center border border-cyan-500/20 shrink-0">
                 <DocumentChartBarIcon className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                <h1 className="text-sm sm:text-base font-bold text-slate-950 dark:text-white truncate">
                   {threadName}
                 </h1>
-                <p className="text-[10px] text-slate-400 font-mono">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-medium">
                   CorpVue MCA Intelligence Agent
                 </p>
               </div>
@@ -376,7 +376,7 @@ export default function Pitch() {
               <button
                 type="button"
                 onClick={() => setDefaultsOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-subtle text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-subtle text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               >
                 <KeyIcon className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Agent Key</span>
@@ -385,7 +385,7 @@ export default function Pitch() {
                 <button
                   type="button"
                   onClick={startNewPitch}
-                  className="px-3 py-1.5 rounded-xl glass-subtle text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                  className="px-3 py-1.5 rounded-xl glass-subtle text-xs font-bold text-cyan-700 dark:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
                 >
                   Change Company
                 </button>
@@ -400,13 +400,13 @@ export default function Pitch() {
               <div className="flex-1 overflow-y-auto scroll-area p-4 sm:p-8 flex flex-col items-center justify-center">
                 <div className="w-full max-w-xl space-y-5 animate-rise">
                   <div className="text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center mx-auto mb-3 border border-cyan-500/20">
+                    <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mx-auto mb-3 border border-cyan-500/20">
                       <SparklesIcon className="w-6 h-6" />
                     </div>
-                    <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-slate-950 dark:text-white">
                       Corporate Pitch Studio
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">
                       Search companies verified under the Ministry of Corporate Affairs (MCA) to generate customized investor briefings.
                     </p>
                   </div>
@@ -441,7 +441,7 @@ export default function Pitch() {
 
                   {/* Error Alert */}
                   {error && (
-                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium animate-fade">
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold animate-fade">
                       {error}
                     </div>
                   )}
@@ -449,7 +449,7 @@ export default function Pitch() {
                   {/* Search Results */}
                   {options.length > 0 && (
                     <div className="space-y-2.5 animate-fade pt-2">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                         Matched Companies ({options.length})
                       </span>
                       <div className="space-y-2 max-h-60 overflow-y-auto scroll-area pr-1">
@@ -460,8 +460,8 @@ export default function Pitch() {
                               key={option.cin}
                               className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                                 isSelected
-                                  ? "bg-cyan-500/15 border-cyan-500/50 shadow-sm"
-                                  : "glass-subtle border-white/10 hover:border-white/20"
+                                  ? "bg-cyan-500/15 border-cyan-500/60 shadow-sm"
+                                  : "glass-subtle border-slate-200 dark:border-white/10 hover:border-slate-300"
                               }`}
                             >
                               <input
@@ -472,14 +472,14 @@ export default function Pitch() {
                                 className="w-4 h-4 accent-cyan-600"
                               />
                               <div className="flex-1 min-w-0">
-                                <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                <div className="text-xs font-bold text-slate-950 dark:text-white truncate">
                                   {option.companyName}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[10px] text-slate-400 font-mono">
+                                <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">
                                   <span>CIN: {option.cin}</span>
                                   {option.rocCode && <span>• ROC: {option.rocCode}</span>}
                                   {option.status && (
-                                    <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-500">
+                                    <span className="px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold">
                                       {option.status}
                                     </span>
                                   )}
@@ -511,14 +511,14 @@ export default function Pitch() {
                     <ChatMessage key={msg.id} message={msg} />
                   ))}
                   {messages.length <= 1 && (
-                    <div className="p-8 text-center text-xs text-slate-400">
-                      Pitch agent ready for <span className="font-semibold text-slate-200">{threadName}</span>. Ask for company diagnostics, market competitors, positioning, or investment narratives.
+                    <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400">
+                      Pitch agent ready for <span className="font-bold text-slate-800 dark:text-slate-200">{threadName}</span>. Ask for company diagnostics, market competitors, positioning, or investment narratives.
                     </div>
                   )}
                 </div>
 
                 {(chatError || error) && (
-                  <div className="px-4 py-2 bg-rose-500/10 text-rose-500 text-xs">
+                  <div className="px-4 py-2 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-semibold">
                     {chatError || error}
                   </div>
                 )}

@@ -376,36 +376,36 @@ export default function Management() {
         {/* If user is NOT logged into Spring Boot EMS, show Spring Boot Auth screen */}
         {!hasToken ? (
           <div className="max-w-md mx-auto my-8 sm:my-16 animate-rise">
-            <div className="glass-card p-6 sm:p-9 border border-purple-500/30 shadow-2xl relative overflow-hidden">
+            <div className="glass-card p-6 sm:p-9 border border-purple-500/30 dark:border-purple-500/20 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
               <div className="text-center mb-6">
-                <div className="w-13 h-13 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center mx-auto mb-3.5 border border-purple-500/20">
+                <div className="w-13 h-13 rounded-2xl bg-purple-500/10 text-purple-700 dark:text-purple-400 flex items-center justify-center mx-auto mb-3.5 border border-purple-500/20">
                   <LockClosedIcon className="w-6 h-6" />
                 </div>
-                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                <h2 className="text-2xl font-extrabold text-slate-950 dark:text-white">
                   EMS Authentication
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono">
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-mono font-medium">
                   {MANAGEMENT_API_URL.replace("https://", "")}
                 </p>
-                <p className="text-xs text-slate-600 dark:text-slate-300 mt-2">
+                <p className="text-xs text-slate-700 dark:text-slate-300 mt-2 font-medium">
                   Accessing Option 3 (EMS) requires independent authentication with the Railway Spring Boot backend.
                 </p>
               </div>
 
               {/* Demo Credentials Auto-Fill Pill */}
               <div className="mb-5 p-3 rounded-2xl glass-subtle flex items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                  <SparklesIcon className="w-4 h-4 text-purple-500 shrink-0" />
+                <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                  <SparklesIcon className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
                   <div className="font-mono text-[11px] leading-tight">
-                    <span className="text-slate-400">Demo:</span> string@string.com / string
+                    <span className="text-slate-500 dark:text-slate-400 font-sans">Demo:</span> string@string.com / string
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleFillDemo}
-                  className="px-2.5 py-1 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-semibold text-[11px] transition-colors border border-purple-500/20"
+                  className="px-2.5 py-1 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-700 dark:text-purple-400 font-bold text-[11px] transition-colors border border-purple-500/30"
                 >
                   Auto-fill
                 </button>
@@ -419,7 +419,7 @@ export default function Management() {
                   className={`py-2 rounded-xl text-xs font-bold transition-all ${
                     loginMode === "login"
                       ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
-                      : "text-slate-600 dark:text-slate-400"
+                      : "text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
                   }`}
                 >
                   Sign In to EMS
@@ -430,7 +430,7 @@ export default function Management() {
                   className={`py-2 rounded-xl text-xs font-bold transition-all ${
                     loginMode === "signup"
                       ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
-                      : "text-slate-600 dark:text-slate-400"
+                      : "text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
                   }`}
                 >
                   New EMS User
@@ -438,7 +438,7 @@ export default function Management() {
               </div>
 
               {authError && (
-                <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium">
+                <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold">
                   {authError}
                 </div>
               )}
@@ -447,7 +447,7 @@ export default function Management() {
                 {loginMode === "signup" && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                         Username *
                       </label>
                       <input
@@ -462,7 +462,7 @@ export default function Management() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                           First Name *
                         </label>
                         <input
@@ -476,7 +476,7 @@ export default function Management() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                           Last Name *
                         </label>
                         <input
@@ -494,7 +494,7 @@ export default function Management() {
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     EMS Email Address *
                   </label>
                   <input
@@ -510,7 +510,7 @@ export default function Management() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     Password *
                   </label>
                   <input
@@ -549,19 +549,19 @@ export default function Management() {
           /* User is authenticated to Spring Boot EMS */
           <div className="space-y-6 animate-fade">
             {/* EMS Top Bar */}
-            <div className="p-4 sm:p-5 rounded-2xl glass-card flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="p-4 sm:p-5 rounded-2xl glass-card border border-slate-300 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
               <div>
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-500/20">
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-700 dark:text-purple-400 flex items-center justify-center border border-purple-500/20">
                     <BuildingOffice2Icon className="w-5 h-5" />
                   </div>
                   <div>
-                    <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+                    <h1 className="text-lg sm:text-xl font-extrabold text-slate-950 dark:text-white">
                       Employee Management System
                     </h1>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span className="font-mono">spring-boot-test-production-a0d6.up.railway.app</span>
+                      <span className="font-mono font-medium">spring-boot-test-production-a0d6.up.railway.app</span>
                     </div>
                   </div>
                 </div>
@@ -571,7 +571,7 @@ export default function Management() {
                 <button
                   type="button"
                   onClick={handleLockEms}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-subtle hover:bg-rose-500/10 text-rose-500 text-xs font-semibold transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-subtle hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-bold transition-colors"
                   title="Locks EMS requiring login again"
                 >
                   <LockClosedIcon className="w-3.5 h-3.5" />
@@ -581,7 +581,7 @@ export default function Management() {
             </div>
 
             {/* Sub-navigation Tabs */}
-            <div className="flex items-center gap-1.5 p-1 rounded-2xl glass-card overflow-x-auto scroll-area">
+            <div className="flex items-center gap-1.5 p-1 rounded-2xl glass-card border border-slate-300 dark:border-white/10 overflow-x-auto scroll-area">
               {MANAGEMENT_RESOURCES.map((res) => {
                 const active = res.id === activeTab;
                 return (
@@ -591,7 +591,7 @@ export default function Management() {
                     className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                       active
                         ? "bg-purple-600 text-white shadow-md shadow-purple-600/30 scale-[1.02]"
-                        : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/30 dark:hover:bg-slate-800/40"
+                        : "text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/40"
                     }`}
                   >
                     {res.label}

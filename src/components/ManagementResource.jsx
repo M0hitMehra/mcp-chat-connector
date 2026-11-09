@@ -222,17 +222,17 @@ export default function ManagementResource({ resource }) {
   return (
     <div className="space-y-6">
       {/* Action Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl glass-card">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl glass-card border border-slate-300 dark:border-white/10 shadow-sm">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            <h2 className="text-xl font-extrabold text-slate-950 dark:text-white">
               {resource.plural}
             </h2>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold border border-indigo-500/20">
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 font-bold border border-indigo-500/25">
               {visibleRows.length} Records
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium">
             Enterprise administration via Spring Boot Railway API
           </p>
         </div>
@@ -242,7 +242,7 @@ export default function ManagementResource({ resource }) {
             type="button"
             onClick={reload}
             disabled={loading || busy}
-            className="p-2.5 rounded-xl glass-subtle hover:bg-white/40 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300 disabled:opacity-50 transition-colors"
+            className="p-2.5 rounded-xl glass-subtle hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 disabled:opacity-50 transition-colors"
             title="Refresh List"
           >
             <ArrowPathIcon className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
@@ -260,13 +260,13 @@ export default function ManagementResource({ resource }) {
 
       {/* Alerts */}
       {error && (
-        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium flex items-center gap-2 animate-fade">
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold flex items-center gap-2 animate-fade">
           <ExclamationCircleIcon className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
       {success && (
-        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium flex items-center gap-2 animate-fade">
+        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2 animate-fade">
           <CheckCircleIcon className="w-4 h-4 shrink-0" />
           <span>{success}</span>
         </div>
@@ -274,9 +274,9 @@ export default function ManagementResource({ resource }) {
 
       {/* Form Drawer / Modal */}
       {formOpen && (
-        <form onSubmit={submit} className="p-6 rounded-2xl glass-card border border-indigo-500/30 animate-rise space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-white/10">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+        <form onSubmit={submit} className="p-6 rounded-2xl glass-card border border-indigo-500/40 animate-rise space-y-4 shadow-lg">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10">
+            <h3 className="text-sm font-bold text-slate-950 dark:text-white">
               {editing == null
                 ? `Create New ${resource.singular}`
                 : `Edit ${resource.singular} · ${editing}`}
@@ -284,7 +284,7 @@ export default function ManagementResource({ resource }) {
             <button
               type="button"
               onClick={cancelForm}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             >
               <XMarkIcon className="w-5 h-5" />
             </button>
@@ -297,7 +297,7 @@ export default function ManagementResource({ resource }) {
                 if (field.type === "select") {
                   return (
                     <div key={field.name}>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                         {field.label} {field.required && "*"}
                       </label>
                       <select
@@ -327,7 +327,7 @@ export default function ManagementResource({ resource }) {
                         onChange={(e) => setDraft({ ...draft, [field.name]: e.target.checked })}
                         className="rounded accent-indigo-600 w-4 h-4"
                       />
-                      <label htmlFor={field.name} className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      <label htmlFor={field.name} className="text-xs font-bold text-slate-800 dark:text-slate-200">
                         {field.label}
                       </label>
                     </div>
@@ -337,7 +337,7 @@ export default function ManagementResource({ resource }) {
                 if (field.type === "textarea") {
                   return (
                     <div key={field.name} className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                         {field.label} {field.required && "*"}
                       </label>
                       <textarea
@@ -353,7 +353,7 @@ export default function ManagementResource({ resource }) {
 
                 return (
                   <div key={field.name}>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                       {field.label} {field.required && "*"}
                     </label>
                     <input
@@ -372,7 +372,7 @@ export default function ManagementResource({ resource }) {
             <button
               type="button"
               onClick={cancelForm}
-              className="px-4 py-2 rounded-xl glass-subtle text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-white/40"
+              className="px-4 py-2 rounded-xl glass-subtle text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200"
             >
               Cancel
             </button>
@@ -388,7 +388,7 @@ export default function ManagementResource({ resource }) {
       )}
 
       {/* Search & Filter Toolbar */}
-      <div className="p-4 rounded-2xl glass-card flex flex-col md:flex-row items-center gap-3">
+      <div className="p-4 rounded-2xl glass-card border border-slate-300 dark:border-white/10 flex flex-col md:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
           <MagnifyingGlassIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -417,32 +417,32 @@ export default function ManagementResource({ resource }) {
       </div>
 
       {/* Records Table / Cards */}
-      <div className="rounded-2xl glass-card overflow-hidden">
+      <div className="rounded-2xl glass-card border border-slate-300 dark:border-white/10 overflow-hidden shadow-sm">
         <div className="overflow-x-auto scroll-area">
           <table className="w-full min-w-[650px] text-left text-xs border-collapse">
-            <thead className="bg-slate-500/5 dark:bg-white/5 border-b border-white/10 text-slate-500 dark:text-slate-400">
+            <thead className="bg-slate-100 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400">
               <tr>
                 {columns.map((column) => (
-                  <th key={column.label} className="px-4 py-3 font-semibold">
+                  <th key={column.label} className="px-4 py-3 font-bold">
                     {column.label}
                   </th>
                 ))}
-                <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                <th className="px-4 py-3 font-bold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-slate-200 dark:divide-white/5">
               {loading ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="py-12 text-center text-slate-400">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                  <td colSpan={columns.length + 1} className="py-12 text-center text-slate-500">
+                    <span className="inline-flex items-center gap-2 font-medium">
+                      <span className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
                       <span>Loading {resource.plural}...</span>
                     </span>
                   </td>
                 </tr>
               ) : visibleRows.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="py-12 text-center text-slate-400">
+                  <td colSpan={columns.length + 1} className="py-12 text-center text-slate-500 font-medium">
                     No matching {resource.plural.toLowerCase()} found.
                   </td>
                 </tr>
@@ -452,10 +452,10 @@ export default function ManagementResource({ resource }) {
                   return (
                     <tr
                       key={key}
-                      className="hover:bg-white/20 dark:hover:bg-slate-800/30 transition-colors"
+                      className="hover:bg-slate-100/70 dark:hover:bg-slate-800/30 transition-colors"
                     >
                       {columns.map((column) => (
-                        <td key={column.label} className="px-4 py-3 text-slate-800 dark:text-slate-200">
+                        <td key={column.label} className="px-4 py-3 text-slate-900 dark:text-slate-200 font-medium">
                           {display(column.value(row))}
                         </td>
                       ))}
@@ -464,7 +464,7 @@ export default function ManagementResource({ resource }) {
                           <button
                             type="button"
                             onClick={() => startEdit(row)}
-                            className="p-1.5 rounded-lg glass-subtle hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                            className="p-1.5 rounded-lg glass-subtle hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-slate-700 dark:text-slate-300"
                             title="Edit"
                           >
                             <PencilSquareIcon className="w-4 h-4" />
@@ -472,7 +472,7 @@ export default function ManagementResource({ resource }) {
                           <button
                             type="button"
                             onClick={() => remove(row)}
-                            className="p-1.5 rounded-lg glass-subtle hover:text-rose-500 transition-colors"
+                            className="p-1.5 rounded-lg glass-subtle hover:text-rose-600 text-rose-500 transition-colors"
                             title="Delete"
                           >
                             <TrashIcon className="w-4 h-4" />

@@ -144,18 +144,18 @@ export default function Auth() {
         <button
           onClick={toggleTheme}
           aria-label="Toggle theme"
-          className="p-2.5 rounded-2xl glass hover:scale-105 transition-all text-slate-600 dark:text-slate-300 shadow-md"
+          className="p-2.5 rounded-2xl glass hover:scale-105 transition-all text-slate-700 dark:text-slate-300 shadow-md"
         >
           {isDark ? (
             <SunIcon className="w-5 h-5 text-amber-400" />
           ) : (
-            <MoonIcon className="w-5 h-5 text-indigo-500" />
+            <MoonIcon className="w-5 h-5 text-indigo-600" />
           )}
         </button>
       </div>
 
       {/* Main Glass Auth Card */}
-      <div className="w-full max-w-md relative z-10 glass-card p-6 sm:p-9 border border-white/25 dark:border-white/10 shadow-2xl animate-rise">
+      <div className="w-full max-w-md relative z-10 glass-card p-6 sm:p-9 border border-slate-300 dark:border-white/10 shadow-2xl animate-rise">
         {/* Header / Logo */}
         <div className="text-center mb-7">
           <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 p-[1.5px] shadow-lg shadow-indigo-500/25 mb-3.5">
@@ -163,26 +163,26 @@ export default function Auth() {
               <CpuChipIcon className="w-7 h-7 text-indigo-300" />
             </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white">
             MCP Agent Studio
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 font-semibold">
             FastAPI Intelligence & Enterprise Hub
           </p>
         </div>
 
         {/* Demo Credentials Quick Pill */}
         <div className="mb-6 p-3 rounded-2xl glass-subtle flex items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-            <SparklesIcon className="w-4 h-4 text-indigo-500 shrink-0" />
+          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
+            <SparklesIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
             <div className="font-mono text-[11px] leading-tight">
-              <span className="text-slate-400">Demo:</span> string@string.com
+              <span className="text-slate-500 dark:text-slate-400 font-sans">Demo:</span> string@string.com / string
             </div>
           </div>
           <button
             type="button"
             onClick={handleFillDemo}
-            className="px-2.5 py-1 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-semibold text-[11px] transition-colors border border-indigo-500/20"
+            className="px-2.5 py-1 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-400 font-bold text-[11px] transition-colors border border-indigo-500/30"
           >
             Auto-fill
           </button>
@@ -199,7 +199,7 @@ export default function Auth() {
             className={`py-2 rounded-xl text-xs font-bold transition-all ${
               mode === "login"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                : "text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
             }`}
           >
             Sign In
@@ -213,7 +213,7 @@ export default function Auth() {
             className={`py-2 rounded-xl text-xs font-bold transition-all ${
               mode === "register"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                : "text-slate-700 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white"
             }`}
           >
             Create Account
@@ -222,7 +222,7 @@ export default function Auth() {
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-5 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium animate-fade">
+          <div className="mb-5 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold animate-fade">
             {error}
           </div>
         )}
@@ -231,7 +231,7 @@ export default function Auth() {
         <form onSubmit={submit} className="space-y-4">
           {mode === "register" && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
                 Username
               </label>
               <input
@@ -246,7 +246,7 @@ export default function Auth() {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
               Email Address
             </label>
             <input
@@ -260,7 +260,7 @@ export default function Auth() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
               Password
             </label>
             <div className="relative">
@@ -275,7 +275,7 @@ export default function Auth() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
               >
                 {showPassword ? (
                   <EyeSlashIcon className="w-4 h-4" />
@@ -305,7 +305,7 @@ export default function Auth() {
           </button>
         </form>
 
-        <div className="mt-6 pt-5 border-t border-white/10 text-center text-xs text-slate-500 dark:text-slate-400 font-medium">
+        <div className="mt-6 pt-5 border-t border-slate-200 dark:border-white/10 text-center text-xs text-slate-600 dark:text-slate-400 font-semibold">
           FastAPI Backend · Port 8000
         </div>
       </div>
