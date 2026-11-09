@@ -22,7 +22,7 @@ export const getAuthUser = () => {
   try {
     return JSON.parse(user);
   } catch {
-    return null;
+    return { email: user };
   }
 };
 
@@ -70,36 +70,36 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Backend API Wrappers
+// FastAPI Authentication Endpoints
 export const registerUser = (payload) => api.post("/auth/register", payload);
-
 export const loginUser = (payload) => api.post("/auth/login", payload);
-
 export const checkHealth = () => api.get("/health");
 
+// FastAPI Thread Management
 export const listThreads = () => api.get("/threads");
-
 export const createThread = (payload) => api.post("/threads", payload);
-
 export const getThreadMessages = (threadId) =>
   api.get(`/threads/${threadId}/messages`);
-
 export const updateThreadConfig = (threadId, payload) =>
   api.patch(`/threads/${threadId}/config`, payload);
 
+// FastAPI Pitch Thread Management
+export const listPitchThreads = () => api.get("/pitch/");
+export const createPitchThread = (payload) => api.post("/pitch/", payload);
+export const getPitchThreadMessages = (threadId) =>
+  api.get(`/pitch/${threadId}/messages`);
 export const updatePitchThreadConfig = (threadId, payload) =>
   api.patch(`/pitch/${threadId}/config`, payload);
-
+export const getLatestPitchThread = () => api.get("/pitch/latest");
 export const searchPitchCompanies = (companyName) =>
   api.post("/pitch/company-search", null, {
     params: { company_name: companyName },
   });
 
-export const createPitchThread = (payload) => api.post("/pitch/", payload);
-
-export const listPitchThreads = () => api.get("/pitch/");
-
-export const getPitchThreadMessages = (threadId) =>
-  api.get(`/pitch/${threadId}/messages`);
+// FastAPI Sessions & MCP Servers
+export const listSessions = () => api.get("/sessions/");
+export const deleteSession = (sessionId) =>
+  api.delete(`/sessions/${sessionId}`);
+export const listMcpServers = () => api.get("/mcpservers/");
 
 export default api;

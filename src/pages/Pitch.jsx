@@ -2,14 +2,23 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeftIcon,
+  ArrowPathIcon,
   ArrowRightIcon,
+  Bars3Icon,
   BuildingOffice2Icon,
+  CheckCircleIcon,
+  CommandLineIcon,
+  DocumentChartBarIcon,
+  KeyIcon,
+  MagnifyingGlassIcon,
   PencilSquareIcon,
   PlusIcon,
   SparklesIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
+
+import Navbar from "../components/Navbar";
 import {
-  clearAuthSession,
   createPitchThread,
   getAuthToken,
   getPitchThreadMessages,
@@ -23,7 +32,6 @@ import ChatMessage from "../components/ChatMessage";
 import MessageInput from "../components/MessageInput";
 import ThreadDefaultsModal from "../components/ThreadDefaultsModal";
 import useChat from "../hooks/useChat";
-import useTheme from "../hooks/useTheme";
 
 const MODEL = "gemini-3.1-flash-lite";
 const MODELS = ["gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"];
@@ -83,9 +91,8 @@ function companyOptions(payload) {
 
 export default function Pitch() {
   const navigate = useNavigate();
-  const { isDark, toggleTheme } = useTheme();
   const config = readConfig();
-  const sessionId = localStorage.getItem("mcp_session_id") || "";
+  const sessionId = localStorage.getItem("mcp_session_id") || "pitch_session";
   const [apiKey, setApiKey] = useState(getSavedApiKey);
   const [model, setModel] = useState(
     () => localStorage.getItem("mcp_model") || config.model_name || MODEL,
@@ -98,13 +105,12 @@ export default function Pitch() {
     "Choose a company for your pitch",
   );
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [defaultsOpen, setDefaultsOpen] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [options, setOptions] = useState([]);
   const [selectedCin, setSelectedCin] = useState("");
   const [busy, setBusy] = useState(false);
-  const [savingSettings, setSavingSettings] = useState(false);
   const [error, setError] = useState("");
 
   const {
@@ -168,6 +174,7 @@ export default function Pitch() {
     setThreadId(thread.thread_id);
     setThreadName(threadLabel(thread, companyNames));
     setError("");
+    setSidebarOpen(false);
   };
 
   const startNewPitch = () => {
@@ -178,6 +185,7 @@ export default function Pitch() {
     setSelectedCin("");
     setError("");
     replaceMessages([]);
+    setSidebarOpen(false);
   };
 
   const search = async (event) => {
@@ -194,11 +202,11 @@ export default function Pitch() {
       const response = await searchPitchCompanies(companyName.trim());
       const found = companyOptions(response.data);
       setOptions(found);
-      if (!found.length)
-        setError(
-          "No company CIN matches were returned. Try another company name.",
-        );
-      else if (found.length === 1) setSelectedCin(String(found[0].cin));
+      if (!found.length) {
+        setError("No company CIN matches were returned. Try another company name.");
+      } else if (found.length === 1) {
+        setSelectedCin(String(found[0].cin));
+      }
     } catch (searchError) {
       setError(
         searchError.response?.data?.detail ||
@@ -213,17 +221,19 @@ export default function Pitch() {
   const createSelectedPitch = async () => {
     const company = options.find((item) => String(item.cin) === selectedCin);
     if (!company) return;
+
     if (!apiKey.trim()) {
       setDefaultsOpen(true);
-      setError("Enter or save an API key before creating the pitch thread.");
+      setError("Please set a Gemini API key before creating a pitch thread.");
       return;
     }
+
     setBusy(true);
     setError("");
     try {
       saveThreadDefaults({ apiKey: apiKey.trim(), modelName: model });
       const response = await createPitchThread({
-        session_id: sessionId,
+        session_id: sessionId || "default",
         model_name: model || MODEL,
         apiKey: apiKey.trim(),
         mcp_servers: config.mcp_servers || [],
@@ -234,12 +244,15 @@ export default function Pitch() {
           companyName: company.companyName,
         },
       });
+
       const nextId = response.data?.thread_id;
       if (!nextId) throw new Error("Backend did not return a pitch thread ID.");
+
       const nextNames = { ...companyNames, [nextId]: company.companyName };
       companyNamesRef.current = nextNames;
       setCompanyNames(nextNames);
       localStorage.setItem(NAME_MAP_KEY, JSON.stringify(nextNames));
+
       setThreadId(nextId);
       setThreadName(company.companyName);
       replaceMessages([]);
@@ -267,327 +280,258 @@ export default function Pitch() {
     }
   };
 
-  const saveSettings = async () => {
-    if (!apiKey.trim()) {
-      setDefaultsOpen(true);
-      return;
-    }
-    saveThreadDefaults({ apiKey: apiKey.trim(), modelName: model });
-    if (!threadId) {
-      setDefaultsOpen(false);
-      return;
-    }
-    setSavingSettings(true);
-    setError("");
-    try {
-      await updatePitchThreadConfig(threadId, {
-        api_key: apiKey.trim(),
-        model_name: model,
-      });
-      setSettingsOpen(false);
-    } catch (saveError) {
-      setError(
-        saveError.response?.data?.detail ||
-          saveError.response?.data?.message ||
-          "Unable to update this pitch thread.",
-      );
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
-  const logout = () => {
-    clearAuthSession();
-    navigate("/");
-  };
-
   return (
-    <main className="app-surface h-screen overflow-auto px-4 py-5 sm:px-7">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col">
-        <header className="mb-5 flex shrink-0 items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--app-bg)]">
-              <BuildingOffice2Icon className="h-6 w-6" />
-            </span>
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">
-                Dedicated pitch workspace
-              </div>
-              <h1 className="text-xl font-bold text-[var(--text)]">
-                {threadName}
-              </h1>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate("/chat")}
-              className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--text)]"
-            >
-              <ArrowLeftIcon className="mr-1 inline h-4 w-4" />
-              Normal chats
-            </button>
-            <button
-              onClick={() => navigate("/manage")}
-              className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--text)]"
-            >
-              Manage
-            </button>
-            <button
-              onClick={toggleTheme}
-              className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--text)]"
-            >
-              {isDark ? "Light" : "Dark"}
-            </button>
-            <button
-              onClick={logout}
-              className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--text)]"
-            >
-              Sign out
-            </button>
-          </div>
-        </header>
+    <div className="h-screen flex flex-col bg-slate-900/5 dark:bg-slate-950/40 text-slate-900 dark:text-white transition-colors duration-300 overflow-hidden">
+      <Navbar />
 
-        <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,28vh)_minmax(0,1fr)] gap-4 overflow- lg:grid-cols-[280px_minmax(0,1fr)] lg:grid-rows-1">
-          <aside className="glass-panel-strong flex min-h-0 flex-col overflow-hidden rounded-2xl p-3">
+      <div className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 flex gap-4 min-h-0 overflow-hidden">
+        {/* Sidebar: Pitch History */}
+        <aside
+          className={`fixed inset-y-0 left-0 z-30 w-72 glass-card p-4 flex flex-col transform transition-transform duration-200 lg:static lg:translate-x-0 ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between pb-3 border-b border-white/10 lg:hidden">
+            <span className="text-xs font-bold text-slate-800 dark:text-white">
+              Pitch History
+            </span>
             <button
-              onClick={startNewPitch}
-              className="mb-3 flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--accent)] text-xs font-semibold text-white"
+              onClick={() => setSidebarOpen(false)}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
             >
-              <PlusIcon className="h-4 w-4" />
-              New pitch
+              <XMarkIcon className="w-5 h-5" />
             </button>
-            <h2 className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-[var(--muted)]">
-              Pitch history · {pitchThreads.length}
-            </h2>
-            <div className="scroll-area flex-1 space-y-1 overflow-y-auto">
-              {loadingHistory ? (
-                <p className="p-3 text-xs text-[var(--muted)]">
-                  Loading history…
-                </p>
-              ) : pitchThreads.length ? (
-                pitchThreads.map((thread) => (
+          </div>
+
+          <button
+            onClick={startNewPitch}
+            className="w-full mt-2 lg:mt-0 mb-3.5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-cyan-600/25 flex items-center justify-center gap-2 transition-all"
+          >
+            <PlusIcon className="w-4 h-4" />
+            <span>New Pitch Brief</span>
+          </button>
+
+          <div className="flex items-center justify-between px-1 mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Saved Pitches ({pitchThreads.length})
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto scroll-area space-y-1.5 pr-1">
+            {loadingHistory ? (
+              <p className="p-3 text-xs text-slate-400 text-center">Loading history...</p>
+            ) : pitchThreads.length === 0 ? (
+              <p className="p-3 text-xs text-slate-400 text-center">No pitch threads yet.</p>
+            ) : (
+              pitchThreads.map((item) => {
+                const active = item.thread_id === threadId;
+                return (
                   <button
-                    key={thread.thread_id}
-                    onClick={() => selectPitch(thread)}
-                    className={`w-full rounded-xl px-3 py-2.5 text-left transition ${thread.thread_id === threadId ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--text)] hover:bg-[var(--panel-muted)]"}`}
+                    key={item.thread_id}
+                    onClick={() => selectPitch(item)}
+                    className={`w-full p-2.5 rounded-xl text-left transition-all text-xs font-medium ${
+                      active
+                        ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 shadow-sm"
+                        : "text-slate-600 dark:text-slate-300 hover:bg-white/30 dark:hover:bg-slate-800/40"
+                    }`}
                   >
-                    <span className="block truncate text-xs font-semibold">
-                      {threadLabel(thread, companyNames)}
-                    </span>
-                    <span className="mt-1 block truncate font-mono text-[9px] opacity-60">
-                      {thread.thread_id}
-                    </span>
+                    <div className="truncate font-semibold">
+                      {threadLabel(item, companyNames)}
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-400 truncate mt-0.5">
+                      {item.thread_id.slice(0, 16)}...
+                    </div>
                   </button>
-                ))
-              ) : (
-                <p className="p-3 text-xs text-[var(--muted)]">
-                  No pitch threads yet.
+                );
+              })
+            )}
+          </div>
+        </aside>
+
+        {/* Main Work Area */}
+        <section className="flex-1 flex flex-col min-w-0 glass-card overflow-hidden">
+          {/* Header */}
+          <div className="p-3.5 sm:p-4 border-b border-white/10 flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-1.5 rounded-xl glass-subtle lg:hidden text-slate-600 dark:text-slate-300"
+              >
+                <Bars3Icon className="w-5 h-5" />
+              </button>
+              <div className="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-500/20 shrink-0">
+                <DocumentChartBarIcon className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                  {threadName}
+                </h1>
+                <p className="text-[10px] text-slate-400 font-mono">
+                  CorpVue MCA Intelligence Agent
                 </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDefaultsOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-subtle text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                <KeyIcon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Agent Key</span>
+              </button>
+              {threadId && (
+                <button
+                  type="button"
+                  onClick={startNewPitch}
+                  className="px-3 py-1.5 rounded-xl glass-subtle text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                >
+                  Change Company
+                </button>
               )}
             </div>
-          </aside>
+          </div>
 
-          <section className="glass-panel-strong flex min-h-0 min-w-0 flex-col overflow-auto rounded-2xl">
-            {loadingHistory ? (
-              <div className="m-auto p-8 text-sm text-[var(--muted)]">
-                Loading pitch history…
-              </div>
-            ) : !threadId ? (
-              <div className="m-auto w-full max-w-2xl p-5 sm:p-8">
-                <div className="mb-5 flex items-start gap-3">
-                  <SparklesIcon className="mt-1 h-6 w-6 text-[var(--accent)]" />
-                  <div>
-                    <h2 className="text-lg font-bold text-[var(--text)]">
-                      Choose a company for your pitch
+          {/* Body Content */}
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            {!threadId ? (
+              /* Search & Setup View */
+              <div className="flex-1 overflow-y-auto scroll-area p-4 sm:p-8 flex flex-col items-center justify-center">
+                <div className="w-full max-w-xl space-y-5 animate-rise">
+                  <div className="text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center mx-auto mb-3 border border-cyan-500/20">
+                      <SparklesIcon className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
+                      Corporate Pitch Studio
                     </h2>
-                    <p className="mt-1 text-sm text-[var(--muted)]">
-                      Search by company name, review CIN matches, then create a
-                      dedicated pitch thread.
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                      Search companies verified under the Ministry of Corporate Affairs (MCA) to generate customized investor briefings.
                     </p>
                   </div>
-                </div>
-                <form
-                  onSubmit={search}
-                  className="flex flex-col gap-3 sm:flex-row"
-                >
-                  <input
-                    value={companyName}
-                    onChange={(event) => setCompanyName(event.target.value)}
-                    placeholder="Company name"
-                    className="min-w-0 flex-1 rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--text)] outline-none focus:border-[var(--accent)]"
-                  />
-                  <button
-                    disabled={busy}
-                    className="rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
-                  >
-                    {busy ? "Searching…" : "Find companies"}
-                  </button>
-                </form>
-                {options.length > 0 && (
-                  <div className="mt-5 space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-                      Select a company
-                    </p>
-                    {options.map((option) => (
-                      <label
-                        key={option.cin}
-                        className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 ${selectedCin === String(option.cin) ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--border)]"}`}
-                      >
-                        <input
-                          type="radio"
-                          name="cin"
-                          value={option.cin}
-                          checked={selectedCin === String(option.cin)}
-                          onChange={(event) =>
-                            setSelectedCin(event.target.value)
-                          }
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-semibold text-[var(--text)]">
-                            {option.companyName}
-                          </span>
-                          <span className="block font-mono text-xs text-[var(--muted)]">
-                            CIN/LLPIN: {option.cin}
-                          </span>
-                          {(option.status || option.type || option.rocCode) && (
-                            <span className="mt-1 block text-[10px] text-[var(--faint)]">
-                              {[option.type, option.status, option.rocCode]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          )}
-                        </span>
-                      </label>
-                    ))}
-                    <button
-                      onClick={createSelectedPitch}
-                      disabled={!selectedCin || busy}
-                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] py-3 text-sm font-semibold text-white disabled:opacity-50"
-                    >
-                      Create pitch thread <ArrowRightIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-                <div className="mt-5 grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--panel-muted)] p-4 sm:grid-cols-[1fr_1fr_auto]">
-                  <label className="text-xs font-semibold text-[var(--muted)]">
-                    API key
-                    <input
-                      type="password"
-                      value={apiKey}
-                      onChange={(event) => setApiKey(event.target.value)}
-                      placeholder="Gemini API key"
-                      className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--text)]"
-                    />
-                  </label>
-                  <label className="text-xs font-semibold text-[var(--muted)]">
-                    Model
-                    <select
-                      value={model}
-                      onChange={(event) => setModel(event.target.value)}
-                      className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--text)]"
-                    >
-                      {MODELS.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={saveSettings}
-                    className="self-end rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--accent)]"
-                  >
-                    Save defaults
-                  </button>
-                </div>
-                {error && (
-                  <p className="mt-4 rounded-xl bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-                    {error}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] p-4">
-                  <span className="text-xs text-[var(--muted)]">
-                    Selected pitch thread
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setSettingsOpen((open) => !open)}
-                      className="flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--text)]"
-                    >
-                      <PencilSquareIcon className="h-4 w-4" />
-                      Edit key/model
-                    </button>
-                    <button
-                      onClick={startNewPitch}
-                      className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--text)]"
-                    >
-                      New pitch
-                    </button>
-                  </div>
-                </div>
-                {settingsOpen && (
-                  <div className="grid gap-3 border-b border-[var(--border)] bg-[var(--panel-muted)] p-4 sm:grid-cols-[1fr_1fr_auto]">
-                    <label className="text-xs font-semibold text-[var(--muted)]">
-                      API key
+
+                  {/* Search Bar */}
+                  <form onSubmit={search} className="flex gap-2">
+                    <div className="relative flex-1">
+                      <MagnifyingGlassIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
-                        type="password"
-                        value={apiKey}
-                        onChange={(event) => setApiKey(event.target.value)}
-                        placeholder="Gemini API key"
-                        className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--text)]"
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="e.g. Reliance, Infosys, Tata..."
+                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl glass-input text-sm"
                       />
-                    </label>
-                    <label className="text-xs font-semibold text-[var(--muted)]">
-                      Model
-                      <select
-                        value={model}
-                        onChange={(event) => setModel(event.target.value)}
-                        className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2 text-sm text-[var(--text)]"
-                      >
-                        {MODELS.map((item) => (
-                          <option key={item} value={item}>
-                            {item}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    </div>
                     <button
-                      onClick={saveSettings}
-                      disabled={savingSettings}
-                      className="self-end rounded-lg bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
+                      type="submit"
+                      disabled={busy}
+                      className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-md shadow-cyan-600/25 disabled:opacity-50 transition-all flex items-center gap-1.5 shrink-0"
                     >
-                      {savingSettings ? "Saving…" : "Save settings"}
+                      {busy ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                          <span>Searching...</span>
+                        </>
+                      ) : (
+                        <span>Lookup</span>
+                      )}
                     </button>
-                  </div>
-                )}
-                <div className="scroll-area min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-6">
-                  {messages.map((message) => (
-                    <ChatMessage key={message.id} message={message} />
-                  ))}
-                  {messages.length <= 1 && (
-                    <p className="py-10 text-center text-sm text-[var(--muted)]">
-                      Ask for a company pitch, positioning, or investor
-                      narrative.
-                    </p>
+                  </form>
+
+                  {/* Error Alert */}
+                  {error && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium animate-fade">
+                      {error}
+                    </div>
+                  )}
+
+                  {/* Search Results */}
+                  {options.length > 0 && (
+                    <div className="space-y-2.5 animate-fade pt-2">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        Matched Companies ({options.length})
+                      </span>
+                      <div className="space-y-2 max-h-60 overflow-y-auto scroll-area pr-1">
+                        {options.map((option) => {
+                          const isSelected = selectedCin === String(option.cin);
+                          return (
+                            <label
+                              key={option.cin}
+                              className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                isSelected
+                                  ? "bg-cyan-500/15 border-cyan-500/50 shadow-sm"
+                                  : "glass-subtle border-white/10 hover:border-white/20"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="selectedCompany"
+                                checked={isSelected}
+                                onChange={() => setSelectedCin(String(option.cin))}
+                                className="w-4 h-4 accent-cyan-600"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                  {option.companyName}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[10px] text-slate-400 font-mono">
+                                  <span>CIN: {option.cin}</span>
+                                  {option.rocCode && <span>• ROC: {option.rocCode}</span>}
+                                  {option.status && (
+                                    <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-500">
+                                      {option.status}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={createSelectedPitch}
+                        disabled={!selectedCin || busy}
+                        className="w-full mt-3 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-cyan-600/30 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                      >
+                        <span>Start Pitch Conversation</span>
+                        <ArrowRightIcon className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
+              </div>
+            ) : (
+              /* Chat Conversation View */
+              <>
+                <div className="flex-1 overflow-y-auto scroll-area p-4 sm:p-6 space-y-4">
+                  {messages.map((msg) => (
+                    <ChatMessage key={msg.id} message={msg} />
+                  ))}
+                  {messages.length <= 1 && (
+                    <div className="p-8 text-center text-xs text-slate-400">
+                      Pitch agent ready for <span className="font-semibold text-slate-200">{threadName}</span>. Ask for company diagnostics, market competitors, positioning, or investment narratives.
+                    </div>
+                  )}
+                </div>
+
                 {(chatError || error) && (
-                  <p className="px-4 text-sm text-[var(--danger)]">
+                  <div className="px-4 py-2 bg-rose-500/10 text-rose-500 text-xs">
                     {chatError || error}
-                  </p>
+                  </div>
                 )}
-                <div className="border-t border-[var(--border)] p-4">
+
+                <div className="shrink-0">
                   <MessageInput onSend={sendMessage} disabled={isStreaming} />
                 </div>
               </>
             )}
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
+
       <ThreadDefaultsModal
         open={defaultsOpen}
         apiKey={apiKey}
@@ -601,6 +545,6 @@ export default function Pitch() {
         }}
         onClose={() => setDefaultsOpen(false)}
       />
-    </main>
+    </div>
   );
 }

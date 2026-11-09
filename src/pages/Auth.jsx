@@ -32,7 +32,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (getAuthToken()) {
-      navigate("/chat");
+      navigate("/hub");
     }
   }, [navigate]);
 
@@ -43,13 +43,13 @@ export default function Auth() {
     }));
   };
 
-  const getPasswordStrength = () => {
-    const pass = form.password;
-    if (!pass) return { score: 0, label: "", color: "" };
-    if (pass.length < 6) return { score: 1, label: "Weak", color: "bg-red-500" };
-    if (pass.length < 10 || !/\d/.test(pass))
-      return { score: 2, label: "Medium", color: "bg-amber-500" };
-    return { score: 3, label: "Strong", color: "bg-emerald-500" };
+  const handleFillDemo = () => {
+    setForm({
+      username: "demo_user",
+      email: "string@string.com",
+      password: "string",
+    });
+    setError("");
   };
 
   const validate = () => {
@@ -67,10 +67,6 @@ export default function Auth() {
 
     if (!form.password.trim()) {
       return "Password is required.";
-    }
-
-    if (form.password.length < 6) {
-      return "Password must be at least 6 characters long.";
     }
 
     return null;
@@ -106,7 +102,10 @@ export default function Auth() {
           ? await registerUser(payload)
           : await loginUser(payload);
 
-      const token = response.data?.token || response.data?.data?.token;
+      const token =
+        response.data?.token ||
+        response.data?.data?.token ||
+        (typeof response.data === "string" ? response.data : null);
 
       if (!token) {
         throw new Error("Backend did not return an authentication token.");
@@ -116,242 +115,200 @@ export default function Auth() {
         token,
         user:
           response.data?.user ||
-          response.data?.data?.user ||
+          response.data?.data ||
           { email: form.email.trim() },
       });
 
-      navigate("/chat");
+      navigate("/hub");
     } catch (authError) {
       console.error(authError);
-
       setError(
-        authError.response?.data?.message ||
-          authError.response?.data?.detail ||
+        authError.response?.data?.detail ||
+          authError.response?.data?.message ||
           authError.message ||
-          "Authentication failed. Please check your credentials."
+          "Authentication failed. Please check credentials or ensure backend is running."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const strength = getPasswordStrength();
-
   return (
-    <main className="app-surface flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-8 lg:grid lg:grid-cols-[1fr_1.1fr] lg:items-center lg:gap-12">
-        {/* Left Hero Column */}
-        <section className="animate-rise flex flex-col justify-between">
-          <div>
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--app-bg)] shadow-lg shadow-[var(--accent-soft)]">
-                  <CpuChipIcon className="h-6 w-6" />
-                </div>
-                <div>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--accent)]">
-                    MCP Client Studio
-                  </span>
-                  <h1 className="text-2xl font-extrabold tracking-tight text-[var(--text)] sm:text-3xl">
-                    Intelligent Agent Studio
-                  </h1>
-                </div>
-              </div>
+    <div className="min-h-screen relative flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+      {/* Background Glass Orbs */}
+      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-indigo-500/15 dark:bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-cyan-500/15 dark:bg-cyan-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
-              <button
-                type="button"
-                onClick={toggleTheme}
-                title="Toggle Theme"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--text)]"
-              >
-                {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
-              </button>
-            </div>
-
-            <p className="mb-8 text-sm leading-relaxed text-[var(--muted)] sm:text-base">
-              Connect model context protocol (MCP) servers directly to Gemini models. Stream real-time agent reasoning, manage sessions, and run custom tool pipelines seamlessly.
-            </p>
-
-            {/* Feature Highlights Grid */}
-            <div className="grid gap-3.5 sm:grid-cols-2">
-              <div className="glass-panel flex items-start gap-3 rounded-xl p-3.5 transition hover:-translate-y-0.5">
-                <ShieldCheckIcon className="h-5 w-5 shrink-0 text-[var(--accent)]" />
-                <div>
-                  <div className="text-xs font-semibold text-[var(--text)]">JWT Bearer Security</div>
-                  <div className="text-[11px] text-[var(--muted)]">Encrypted MongoDB session auth</div>
-                </div>
-              </div>
-
-              <div className="glass-panel flex items-start gap-3 rounded-xl p-3.5 transition hover:-translate-y-0.5">
-                <SparklesIcon className="h-5 w-5 shrink-0 text-[var(--emerald)]" />
-                <div>
-                  <div className="text-xs font-semibold text-[var(--text)]">MCP Tool Servers</div>
-                  <div className="text-[11px] text-[var(--muted)]">Dynamically expand agent capabilities</div>
-                </div>
-              </div>
-
-              <div className="glass-panel flex items-start gap-3 rounded-xl p-3.5 transition hover:-translate-y-0.5">
-                <CheckCircleIcon className="h-5 w-5 shrink-0 text-[var(--accent)]" />
-                <div>
-                  <div className="text-xs font-semibold text-[var(--text)]">Persistent Threads</div>
-                  <div className="text-[11px] text-[var(--muted)]">Full chat history & memory summaries</div>
-                </div>
-              </div>
-
-              <div className="glass-panel flex items-start gap-3 rounded-xl p-3.5 transition hover:-translate-y-0.5">
-                <LockClosedIcon className="h-5 w-5 shrink-0 text-[var(--emerald)]" />
-                <div>
-                  <div className="text-xs font-semibold text-[var(--text)]">Streaming SSE</div>
-                  <div className="text-[11px] text-[var(--muted)]">Low-latency token-by-token response</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Right Form Card */}
-        <form
-          onSubmit={submit}
-          className="glass-panel-strong animate-scale rounded-2xl p-6 sm:p-8"
+      {/* Top right Theme Switcher */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
+        <button
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+          className="p-2.5 rounded-2xl glass hover:scale-105 transition-all text-slate-600 dark:text-slate-300 shadow-md"
         >
-          {/* Mode Switcher Header */}
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-[var(--text)]">
-                {mode === "login" ? "Welcome back" : "Create your account"}
-              </h2>
-              <p className="text-xs text-[var(--muted)]">
-                {mode === "login" ? "Sign in to access your agent workspace" : "Register to start configuring MCP servers"}
-              </p>
+          {isDark ? (
+            <SunIcon className="w-5 h-5 text-amber-400" />
+          ) : (
+            <MoonIcon className="w-5 h-5 text-indigo-500" />
+          )}
+        </button>
+      </div>
+
+      {/* Main Glass Auth Card */}
+      <div className="w-full max-w-md relative z-10 glass-card p-6 sm:p-9 border border-white/25 dark:border-white/10 shadow-2xl animate-rise">
+        {/* Header / Logo */}
+        <div className="text-center mb-7">
+          <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 p-[1.5px] shadow-lg shadow-indigo-500/25 mb-3.5">
+            <div className="w-full h-full rounded-2xl bg-slate-900/40 backdrop-blur-md flex items-center justify-center">
+              <CpuChipIcon className="w-7 h-7 text-indigo-300" />
             </div>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            MCP Agent Studio
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
+            FastAPI Intelligence & Enterprise Hub
+          </p>
+        </div>
 
-          <div className="mb-6 grid grid-cols-2 rounded-xl bg-[var(--panel-muted)] p-1 border border-[var(--border)]">
-            <button
-              type="button"
-              onClick={() => {
-                setMode("login");
-                setError("");
-              }}
-              className={`rounded-lg py-2 text-xs font-semibold transition ${
-                mode === "login"
-                  ? "bg-[var(--panel-strong)] text-[var(--accent)] shadow-sm"
-                  : "text-[var(--muted)] hover:text-[var(--text)]"
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode("register");
-                setError("");
-              }}
-              className={`rounded-lg py-2 text-xs font-semibold transition ${
-                mode === "register"
-                  ? "bg-[var(--panel-strong)] text-[var(--accent)] shadow-sm"
-                  : "text-[var(--muted)] hover:text-[var(--text)]"
-              }`}
-            >
-              Create Account
-            </button>
+        {/* Demo Credentials Quick Pill */}
+        <div className="mb-6 p-3 rounded-2xl glass-subtle flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+            <SparklesIcon className="w-4 h-4 text-indigo-500 shrink-0" />
+            <div className="font-mono text-[11px] leading-tight">
+              <span className="text-slate-400">Demo:</span> string@string.com
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={handleFillDemo}
+            className="px-2.5 py-1 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-semibold text-[11px] transition-colors border border-indigo-500/20"
+          >
+            Auto-fill
+          </button>
+        </div>
 
-          <div className="space-y-4">
-            {mode === "register" && (
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  value={form.username}
-                  onChange={(e) => updateField("username", e.target.value)}
-                  placeholder="e.g. Mohit"
-                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
-                />
-              </div>
-            )}
+        {/* Tab Switcher: Sign In vs Sign Up */}
+        <div className="grid grid-cols-2 p-1 rounded-2xl glass-subtle mb-6 gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("login");
+              setError("");
+            }}
+            className={`py-2 rounded-xl text-xs font-bold transition-all ${
+              mode === "login"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("register");
+              setError("");
+            }}
+            className={`py-2 rounded-xl text-xs font-bold transition-all ${
+              mode === "register"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            }`}
+          >
+            Create Account
+          </button>
+        </div>
 
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-5 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium animate-fade">
+            {error}
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={submit} className="space-y-4">
+          {mode === "register" && (
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-                Email Address
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                Username
               </label>
               <input
-                type="email"
-                value={form.email}
-                onChange={(e) => updateField("email", e.target.value)}
-                placeholder="you@example.com"
-                className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
+                type="text"
+                required
+                value={form.username}
+                onChange={(e) => updateField("username", e.target.value)}
+                placeholder="Choose a username"
+                className="w-full px-3.5 py-2.5 rounded-xl glass-input text-sm"
               />
             </div>
+          )}
 
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={(e) => updateField("password", e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 pr-12 text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-soft)]"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--text)]"
-                >
-                  {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
-                </button>
-              </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              Email Address
+            </label>
+            <input
+              type="email"
+              required
+              value={form.email}
+              onChange={(e) => updateField("email", e.target.value)}
+              placeholder="e.g. string@string.com"
+              className="w-full px-3.5 py-2.5 rounded-xl glass-input text-sm"
+            />
+          </div>
 
-              {mode === "register" && form.password && (
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel-muted)]">
-                    <div
-                      className={`h-full transition-all duration-300 ${strength.color}`}
-                      style={{ width: `${(strength.score / 3) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] font-semibold text-[var(--muted)]">
-                    {strength.label}
-                  </span>
-                </div>
-              )}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={form.password}
+                onChange={(e) => updateField("password", e.target.value)}
+                placeholder="Enter password"
+                className="w-full px-3.5 py-2.5 pr-10 rounded-xl glass-input text-sm font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                {showPassword ? (
+                  <EyeSlashIcon className="w-4 h-4" />
+                ) : (
+                  <EyeIcon className="w-4 h-4" />
+                )}
+              </button>
             </div>
+          </div>
 
-            {error && (
-              <div className="animate-fade rounded-xl border border-[var(--danger-soft)] bg-[var(--danger-soft)] p-3 text-xs font-medium text-[var(--danger)]">
-                {error}
-              </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full mt-2 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                <span>Authenticating...</span>
+              </span>
+            ) : (
+              <>
+                <span>{mode === "login" ? "Sign In to Studio" : "Create Account"}</span>
+                <ArrowRightIcon className="w-4 h-4" />
+              </>
             )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] text-sm font-semibold text-[var(--app-bg)] shadow-md shadow-[var(--accent-soft)] transition hover:-translate-y-0.5 hover:bg-[var(--accent-hover)] active:translate-y-0 disabled:opacity-60"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--app-bg)] border-t-transparent" />
-                  Processing...
-                </span>
-              ) : (
-                <>
-                  <span>{mode === "register" ? "Create Account & Continue" : "Sign In to Workspace"}</span>
-                  <ArrowRightIcon className="h-4 w-4" />
-                </>
-              )}
-            </button>
-          </div>
-
-          <div className="mt-6 text-center text-xs text-[var(--muted)]">
-            By continuing, you connect with the Secure MCP Backend API.
-          </div>
+          </button>
         </form>
+
+        <div className="mt-6 pt-5 border-t border-white/10 text-center text-xs text-slate-500 dark:text-slate-400 font-medium">
+          FastAPI Backend · Port 8000
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
